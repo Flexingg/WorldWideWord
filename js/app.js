@@ -1,5 +1,5 @@
 /**
- * WordWideWeb - Core Logic
+ * WordWideWeb - Core Logic (Pure Web Version)
  */
 
 const REPO_ROOT = "./"; 
@@ -88,7 +88,9 @@ const Selector = {
         for(let i=1; i<=b.c; i++) {
             const el = document.createElement('div'); el.className = 'card chapter-card'; el.innerText = i;
             const name = `${b.n} ${i}`;
+            // STRICT WEB PATH (No Tasker Logic)
             const path = `bibles/BSB/BER-${b.n}/${name}.md`;
+            
             if(last === path) el.classList.add('last-read');
             el.onclick = () => Reader.load(path, name);
             grid.appendChild(el);
@@ -137,7 +139,6 @@ const Selector = {
         const loader = document.getElementById('loader');
         list.innerHTML = ''; loader.classList.add('visible');
         
-        // Fetch Index if needed
         if (!Selector.searchIndex) {
             try {
                 const res = await fetch('data/search_index.json');
@@ -150,7 +151,6 @@ const Selector = {
             }
         }
         
-        // Execute Search
         const cleanQ = query.toLowerCase();
         const results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
         
@@ -158,7 +158,6 @@ const Selector = {
         if(results.length === 0) {
             list.innerHTML = '<div style="text-align:center;margin-top:20px">No results found.</div>';
         } else {
-            // Limit results to 50 for performance
             Selector.renderResults(results.slice(0, 50));
         }
     },
@@ -276,10 +275,10 @@ const Reader = {
                 parts.forEach(p => {
                     if (p.match(/^\[\[[HG]\d+\]\]$/)) {
                         const code = p.match(/[HG]\d+/)[0];
-                        const lastSpan = wordsHtml.match(/<span [^>]*id="([^"]*)"[^>]*>([^<]*)<\/span>$/);
-                        if(lastSpan) {
-                            const oldId = lastSpan[1];
-                            const oldText = lastSpan[2];
+                        const lastSpanMatch = wordsHtml.match(/<span [^>]*id="([^"]*)"[^>]*>([^<]*)<\/span>$/);
+                        if(lastSpanMatch) {
+                            const oldId = lastSpanMatch[1];
+                            const oldText = lastSpanMatch[2];
                             const hl = Reader.highlightData[oldId] || "";
                             const repl = `<span id="${oldId}" class="w ${hl} lexicon-word" data-code="${code}" onclick="Reader.wordClick(event, '${oldId}')">${oldText}</span>`;
                             wordsHtml = wordsHtml.substring(0, wordsHtml.lastIndexOf("<span")) + repl;
@@ -322,10 +321,9 @@ const Reader = {
         AppAPI.setGlobal("BibleHistory", JSON.stringify(h));
     },
 
-    // Interaction Handlers
-    verseClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='word') Reader.clearSel(); Reader.selectedType='verse'; Reader.toggle(id); },
-    wordClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='verse') Reader.clearSel(); Reader.selectedType='word'; Reader.toggle(id); },
-    toggle: (id) => {
+    verseClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='word') Reader.clearSel(); Reader.selectedType='verse'; Reader.toggleSel(id); },
+    wordClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='verse') Reader.clearSel(); Reader.selectedType='word'; Reader.toggleSel(id); },
+    toggleSel: (id) => {
         const el = document.getElementById(id);
         if(Reader.selectionIds.has(id)) { Reader.selectionIds.delete(id); el.classList.remove('ui-selected'); }
         else { Reader.selectionIds.add(id); el.classList.add('ui-selected'); }
@@ -337,7 +335,7 @@ const Reader = {
         Reader.selectionIds.forEach(id => { if(document.getElementById(id).dataset.code) hasCode=true; });
         document.getElementById('rowWordTools').style.display = hasCode ? 'flex' : 'none';
         document.getElementById('sepWordTools').style.display = hasCode ? 'block' : 'none';
-        m.classList.toggle('visible', Reader.selectionIds.size > 0);
+        if(Reader.selectionIds.size > 0) m.classList.add('visible'); else m.classList.remove('visible');
     },
     clearSel: () => {
         Reader.selectionIds.forEach(id => document.getElementById(id).classList.remove('ui-selected'));
@@ -355,7 +353,6 @@ const Reader = {
         Reader.clearSel();
     },
     
-    // Tools
     findUsage: () => {
         let code = null;
         Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code = el.dataset.code; });
@@ -403,7 +400,7 @@ const Reader = {
     }
 };
 
-// --- AUDIO (Virtual Timeline) ---
+// --- AUDIO (Static File Logic) ---
 const ReaderAudio = {
     folder: "", playlist: [], player: new Audio(),
     partDurations: [], totalDuration: 0, currentTrack: 0,
@@ -417,22 +414,18 @@ const ReaderAudio = {
         document.getElementById('btnAudio').classList.remove('hidden');
         document.getElementById('btnStop').classList.add('hidden');
         
-        // 1. Check for audio existence (Probe part_0.mp3)
         const check = new Audio(ReaderAudio.folder + "part_0.mp3");
-        check.onloadeddata = () => {
-            document.getElementById('btnAudio').classList.remove('hidden');
-            ReaderAudio.scanFiles(); // Pre-scan if found
+        check.onloadeddata = () => { 
+            document.getElementById('btnAudio').querySelector('span').innerText = "headphones";
+            ReaderAudio.playlist = [ReaderAudio.folder + "part_0.mp3"];
         };
-        check.onerror = () => {
-            document.getElementById('btnAudio').classList.add('hidden'); // Hide if no audio
-        };
+        check.onerror = () => { document.getElementById('btnAudio').querySelector('span').innerText = "volume_off"; };
         
         ReaderAudio.player.addEventListener('ended', ReaderAudio.next);
         ReaderAudio.player.addEventListener('timeupdate', ReaderAudio.updateScrubber);
     },
     
     scanFiles: () => {
-        // Recursive scan to find all parts
         ReaderAudio.playlist = [];
         ReaderAudio.findPart(0);
     },
@@ -445,7 +438,6 @@ const ReaderAudio = {
             ReaderAudio.findPart(idx + 1);
         };
         t.onerror = () => {
-            // Done scanning
             ReaderAudio.calcDurations();
         };
     },
@@ -453,6 +445,8 @@ const ReaderAudio = {
     calcDurations: () => {
         ReaderAudio.partDurations = new Array(ReaderAudio.playlist.length).fill(0);
         let loaded = 0;
+        document.getElementById('audioPlayerPopup').classList.add('visible');
+        
         ReaderAudio.playlist.forEach((src, i) => {
             const t = new Audio(src);
             t.onloadedmetadata = () => {
@@ -461,39 +455,31 @@ const ReaderAudio = {
                 if(loaded === ReaderAudio.playlist.length) {
                     ReaderAudio.totalDuration = ReaderAudio.partDurations.reduce((a,b)=>a+b, 0);
                     document.getElementById('timeTotal').innerText = ReaderAudio.fmtTime(ReaderAudio.totalDuration);
+                    ReaderAudio.playTrack(0);
                 }
             };
         });
     },
     
-    toggleUI: () => document.getElementById('audioPlayerPopup').classList.toggle('visible'),
+    toggleUI: () => {
+        if(ReaderAudio.playlist.length > 0) ReaderAudio.scanFiles();
+    },
     hide: () => document.getElementById('audioPlayerPopup').classList.remove('visible'),
     
     togglePlay: () => {
-        if(ReaderAudio.player.paused) {
-            ReaderAudio.playTrack(ReaderAudio.currentTrack);
-        } else {
-            ReaderAudio.player.pause();
-            ReaderAudio.updateUI(false);
-        }
+        if(ReaderAudio.player.paused) ReaderAudio.player.play();
+        else ReaderAudio.player.pause();
+        ReaderAudio.updateUI(!ReaderAudio.player.paused);
     },
     
     playTrack: (idx) => {
         if(idx >= ReaderAudio.playlist.length) { ReaderAudio.stop(); return; }
-        
-        // Don't reload if just resuming
-        if(ReaderAudio.currentTrack !== idx || ReaderAudio.player.src === "") {
-            ReaderAudio.player.src = ReaderAudio.playlist[idx];
-            ReaderAudio.player.load();
-        }
-        
         ReaderAudio.currentTrack = idx;
-        const savedSpeed = parseFloat(AppAPI.getGlobal("BibleAudioSpeed") || 1.0);
-        ReaderAudio.player.playbackRate = savedSpeed;
-        
-        ReaderAudio.player.play()
-            .then(() => ReaderAudio.updateUI(true))
-            .catch(e => console.log("Play error", e));
+        ReaderAudio.player.src = ReaderAudio.playlist[idx];
+        const spd = parseFloat(AppAPI.getGlobal("BibleAudioSpeed") || 1.0);
+        ReaderAudio.player.playbackRate = spd;
+        ReaderAudio.player.play();
+        ReaderAudio.updateUI(true);
     },
     
     stop: () => {
@@ -534,9 +520,6 @@ const ReaderAudio = {
         document.getElementById('scrubber').value = pct;
         document.getElementById('waveFill').style.width = pct + "%";
         document.getElementById('timeCurr').innerText = ReaderAudio.fmtTime(cur);
-        
-        // Auto Scroll Sync (0.25x speed if playing)
-        if(ReaderScroll.active && playing) { /* Handled in scroll loop */ }
     },
     
     handleScrub: (val) => {
@@ -549,12 +532,10 @@ const ReaderAudio = {
         if (track !== ReaderAudio.currentTrack) {
             ReaderAudio.currentTrack = track;
             ReaderAudio.player.src = ReaderAudio.playlist[track];
-            ReaderAudio.player.play().then(() => {
-                ReaderAudio.player.currentTime = offset;
-            });
-        } else {
-            ReaderAudio.player.currentTime = offset;
+            ReaderAudio.player.play();
+            ReaderAudio.updateUI(true);
         }
+        ReaderAudio.player.currentTime = offset;
     },
     
     toggleSpeedPopup: () => document.getElementById('speedControlPopup').classList.toggle('visible'),
@@ -566,7 +547,7 @@ const ReaderAudio = {
     },
     seek: (s) => ReaderAudio.player.currentTime += s,
     toggleAutoPlay: () => {
-        const n = !AppAPI.getGlobal("BibleAutoPlay") === 'true';
+        const n = !(AppAPI.getGlobal("BibleAutoPlay") === 'true');
         AppAPI.setGlobal("BibleAutoPlay", n ? 'true' : 'false');
         document.getElementById('btnAutoPlay').classList.toggle('active', n);
     },
@@ -575,16 +556,12 @@ const ReaderAudio = {
         const m = Math.floor(s/60);
         const sec = Math.floor(s%60);
         return `${m}:${sec<10?'0':''}${sec}`;
-    },
-    get isPlaying() { return !ReaderAudio.player.paused; }
+    }
 };
 
-// --- SCROLL ---
+// --- READER SCROLL ---
 const ReaderScroll = {
     active: false,
-    reqId: null,
-    frameCount: 0,
-    
     toggle: () => {
         ReaderScroll.active = !ReaderScroll.active;
         const btn = document.getElementById('btnAutoScroll');
@@ -598,34 +575,21 @@ const ReaderScroll = {
             btn.classList.remove('active');
             btn.querySelector('span:last-child').innerText = "Scroll";
             spd.style.display = 'none';
-            cancelAnimationFrame(ReaderScroll.reqId);
         }
     },
-    
     loop: () => {
         if(!ReaderScroll.active) return;
+        let speed = parseInt(document.getElementById('scrollSpeedLabel').innerText) || 1;
+        if(!ReaderAudio.player.paused) speed = 0.5; // Slow down when reading
         
-        // Sync with Audio: If audio playing, scroll slower (0.25x)
-        if(ReaderAudio.isPlaying) {
-            ReaderScroll.frameCount++;
-            if(ReaderScroll.frameCount >= 4) {
-                window.scrollBy(0, 1);
-                ReaderScroll.frameCount = 0;
-            }
-        } else {
-            // Manual speed
-            const speed = parseInt(document.getElementById('scrollSpeedLabel').innerText) || 1;
-            window.scrollBy(0, speed * 0.5);
-        }
-        
+        window.scrollBy(0, speed);
         if((window.innerHeight + window.pageYOffset) >= document.body.offsetHeight - 10) {
             if(AppAPI.getGlobal("BibleAutoPlay") === 'true') Reader.navNext();
             else ReaderScroll.toggle();
             return;
         }
-        ReaderScroll.reqId = requestAnimationFrame(ReaderScroll.loop);
+        requestAnimationFrame(ReaderScroll.loop);
     },
-    
     cycleSpeed: () => {
         const el = document.getElementById('scrollSpeedLabel');
         let s = parseInt(el.innerText);
