@@ -1,5 +1,5 @@
 /**
- * WordWideWeb - Core Logic (Pure Web Version)
+ * WordWideWeb - Core Logic
  */
 
 const REPO_ROOT = "./"; 
@@ -12,7 +12,6 @@ const App = {
         if(theme) App.applyTheme(theme);
         Selector.init();
         
-        // Check for cross-session search request
         const autoS = AppAPI.getGlobal("BibleAutoSearch");
         if(autoS && autoS.length > 2) {
             AppAPI.setGlobal("BibleAutoSearch", "");
@@ -41,18 +40,24 @@ const App = {
     },
 
     goHome: () => {
+        // UI Reset
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
+        
+        // Header Controls
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnAudio').classList.add('hidden');
         document.getElementById('btnNextChap').classList.add('hidden');
         document.getElementById('btnStop').classList.add('hidden');
         document.getElementById('btnHistory').classList.remove('hidden');
         document.querySelector('.search-wrapper').classList.remove('hidden');
-        
-        // Fixed: Use headerLabel instead of pageTitle
         document.getElementById('headerLabel').innerText = "The Bible";
+        
+        // Stop Audio
         ReaderAudio.stop();
+        
+        // Ensure we are on the Book Grid (not chapter list or search)
+        Selector.reset(); 
     }
 };
 
@@ -75,7 +80,6 @@ const Selector = {
     },
 
     openBook: (b) => {
-        // Fixed: Use headerLabel
         document.getElementById('headerLabel').innerText = b.n;
         document.getElementById('bookGrid').classList.add('hidden');
         document.getElementById('searchList').classList.add('hidden');
@@ -91,9 +95,7 @@ const Selector = {
         for(let i=1; i<=b.c; i++) {
             const el = document.createElement('div'); el.className = 'card chapter-card'; el.innerText = i;
             const name = `${b.n} ${i}`;
-            // STRICT WEB PATH (No Tasker Logic)
             const path = `bibles/BSB/BER-${b.n}/${name}.md`;
-            
             if(last === path) el.classList.add('last-read');
             el.onclick = () => Reader.load(path, name);
             grid.appendChild(el);
@@ -114,7 +116,8 @@ const Selector = {
             document.getElementById('searchList').classList.remove('hidden');
             
             if(initialQuery) {
-                input.value = initialQuery;
+                const displayQuery = initialQuery.replace(/\\\[/g, "[").replace(/\\\]/g, "]");
+                input.value = displayQuery;
                 Selector.performSearch(initialQuery);
             } else {
                 document.getElementById('searchList').innerHTML = '<div style="text-align:center;opacity:0.5;margin-top:20px">Type word and press Enter</div>';
@@ -154,7 +157,7 @@ const Selector = {
             }
         }
         
-        const cleanQ = query.toLowerCase();
+        const cleanQ = query.toLowerCase().replace(/\\/g, "").replace(/\[/g, "").replace(/\]/g, "");
         const results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
         
         loader.classList.remove('visible');
@@ -184,8 +187,6 @@ const Selector = {
             document.querySelector('.search-wrapper').classList.add('hidden');
             document.getElementById('btnBack').classList.remove('hidden');
             document.getElementById('btnBack').onclick = Selector.reset;
-            
-            // Fixed: Use headerLabel
             document.getElementById('headerLabel').innerText = "History";
             
             const raw = AppAPI.getGlobal("BibleHistory");
@@ -222,7 +223,6 @@ const Selector = {
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnHistory').classList.remove('hidden');
         
-        // Fixed: Use headerLabel
         document.getElementById('headerLabel').innerText = "The Bible";
         Selector.renderBooks(BOOKS);
     }
@@ -242,7 +242,6 @@ const Reader = {
         document.getElementById('readerLoading').classList.remove('hidden');
         document.getElementById('contentArea').innerHTML = "";
         
-        // Fixed: Use headerLabel
         document.getElementById('headerLabel').innerText = name;
         document.getElementById('btnBack').classList.remove('hidden');
         document.getElementById('btnBack').onclick = App.goHome;
@@ -273,40 +272,65 @@ const Reader = {
         let text = md.replace(/^\s*\[\[[\s\S]*?---/m, "").replace(/^---[\s\S]*?---/g, "").replace(/^# .*$/gm, "").replace(/^\s*---\s*$/gm, "").trim();
         const chunks = text.split(/(?=###### \d+)/);
         let html = "";
+        
         chunks.forEach(c => {
             const m = c.match(/^###### (\d+)([\s\S]*)/);
             if(m) {
                 const vNum = m[1], vText = m[2].trim(), vId = `v-${vNum}`;
                 let wordsHtml = "";
+                
+                // --- ROBUST TOKENIZER ---
+                // Splits by Strongs codes to ensure they are attached to words
                 const parts = vText.split(/(\[\[[HG]\d+\]\])/);
-                let wIdx = 0;
+                let tokens = [];
+
                 parts.forEach(p => {
                     if (p.match(/^\[\[[HG]\d+\]\]$/)) {
                         const code = p.match(/[HG]\d+/)[0];
-                        const lastSpanMatch = wordsHtml.match(/<span [^>]*id="([^"]*)"[^>]*>([^<]*)<\/span>$/);
-                        if(lastSpanMatch) {
-                            const oldId = lastSpanMatch[1];
-                            const oldText = lastSpanMatch[2];
-                            const hl = Reader.highlightData[oldId] || "";
-                            const repl = `<span id="${oldId}" class="w ${hl} lexicon-word" data-code="${code}" onclick="Reader.wordClick(event, '${oldId}')">${oldText}</span>`;
-                            wordsHtml = wordsHtml.substring(0, wordsHtml.lastIndexOf("<span")) + repl;
+                        // Attach code to the previous word token if it exists
+                        for (let i = tokens.length - 1; i >= 0; i--) {
+                            if (tokens[i].type === 'word') {
+                                tokens[i].code = code;
+                                break;
+                            }
                         }
-                    } else if(p.trim() !== "") {
-                        p.split(/(\s+)/).forEach(sp => {
-                            if(!sp) return;
-                            if(sp.match(/^\s+$/)) wordsHtml += sp;
-                            else {
-                                const wId = `${vId}-w-${wIdx}`;
-                                const hl = Reader.highlightData[wId] || "";
-                                wordsHtml += `<span id="${wId}" class="w ${hl}" onclick="Reader.wordClick(event, '${wId}')">${sp}</span>`;
-                                wIdx++;
+                    } else if (p.trim() !== "") {
+                        // Split text by spaces, preserving the spaces as tokens
+                        const sub = p.split(/(\s+)/);
+                        sub.forEach(s => {
+                            if (!s) return;
+                            if (s.match(/^\s+$/)) {
+                                tokens.push({ type: 'space', text: s });
+                            } else {
+                                tokens.push({ type: 'word', text: s, code: null });
                             }
                         });
-                    } else if(p.match(/\s+/)) wordsHtml += p;
+                    } else if (p.match(/\s+/)) {
+                        tokens.push({ type: 'space', text: p });
+                    }
                 });
+                
+                // Render Tokens to HTML
+                let wIdx = 0;
+                tokens.forEach(t => {
+                    if(t.type === 'space') {
+                        wordsHtml += t.text;
+                    } else {
+                        const wId = `${vId}-w-${wIdx}`;
+                        const hl = Reader.highlightData[wId] || "";
+                        const lexClass = t.code ? "lexicon-word" : "";
+                        const dataAttr = t.code ? `data-code="${t.code}"` : "";
+                        
+                        wordsHtml += `<span id="${wId}" class="w ${hl} ${lexClass}" ${dataAttr} onclick="Reader.wordClick(event, '${wId}')">${t.text}</span>`;
+                        wIdx++;
+                    }
+                });
+
                 const vHl = Reader.highlightData[vId] || "";
                 html += `<div class="verse-block ${vHl}" id="${vId}"><span class="verse-num" onclick="Reader.verseClick(event, '${vId}')">${vNum}</span>${wordsHtml}</div>`;
-            } else if(c.length > 5) html += `<div style="padding:16px; font-style:italic">${c}</div>`;
+            } else if(c.length > 5) {
+                html += `<div style="padding:16px; font-style:italic">${c}</div>`;
+            }
         });
         document.getElementById('contentArea').innerHTML = html;
     },
@@ -337,19 +361,25 @@ const Reader = {
         else { Reader.selectionIds.add(id); el.classList.add('ui-selected'); }
         Reader.updateMenu();
     },
+    
     updateMenu: () => {
         const m = document.getElementById('selectionIsland');
         let hasCode = false;
-        Reader.selectionIds.forEach(id => { if(document.getElementById(id).dataset.code) hasCode=true; });
+        Reader.selectionIds.forEach(id => { 
+            const el = document.getElementById(id);
+            if(el && el.dataset.code) hasCode=true; 
+        });
         document.getElementById('rowWordTools').style.display = hasCode ? 'flex' : 'none';
         document.getElementById('sepWordTools').style.display = hasCode ? 'block' : 'none';
         m.classList.toggle('visible', Reader.selectionIds.size > 0);
     },
+    
     clearSel: () => {
         Reader.selectionIds.forEach(id => document.getElementById(id).classList.remove('ui-selected'));
         Reader.selectionIds.clear();
         document.getElementById('selectionIsland').classList.remove('visible');
     },
+    
     applyColor: (c) => {
         Reader.selectionIds.forEach(id => {
             const el = document.getElementById(id);
@@ -365,10 +395,12 @@ const Reader = {
         let code = null;
         Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code = el.dataset.code; });
         if(code) {
-            AppAPI.setGlobal("BibleAutoSearch", code);
+            // Use escaped brackets so Regex logic in Search knows it's a code
+            AppAPI.setGlobal("BibleAutoSearch", `\\[\\[${code}\\]\\]`);
             App.goHome(); 
         }
     },
+    
     getDefinition: async () => {
         let code = null;
         Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code=el.dataset.code; });
@@ -385,7 +417,6 @@ const Reader = {
     closeLexicon: (e) => { if(!e || e.target.id === "lexiconModal") document.getElementById('lexiconModal').classList.remove('open'); },
     
     openNote: async () => {
-        // Fixed: Use headerLabel
         document.getElementById('noteTitle').innerText = Reader.currentName;
         const key = "Note_" + Reader.currentName;
         const val = await AppAPI.loadData(key);
@@ -409,7 +440,7 @@ const Reader = {
     }
 };
 
-// --- AUDIO (Static File Logic) ---
+// --- AUDIO ---
 const ReaderAudio = {
     folder: "", playlist: [], player: new Audio(),
     partDurations: [], totalDuration: 0, currentTrack: 0,
@@ -434,21 +465,13 @@ const ReaderAudio = {
         ReaderAudio.player.addEventListener('timeupdate', ReaderAudio.updateScrubber);
     },
     
-    scanFiles: () => {
-        ReaderAudio.playlist = [];
-        ReaderAudio.findPart(0);
-    },
+    scanFiles: () => { ReaderAudio.playlist = []; ReaderAudio.findPart(0); },
     
     findPart: (idx) => {
         const path = `${ReaderAudio.folder}part_${idx}.mp3`;
         const t = new Audio(path);
-        t.onloadedmetadata = () => {
-            ReaderAudio.playlist.push(path);
-            ReaderAudio.findPart(idx + 1);
-        };
-        t.onerror = () => {
-            ReaderAudio.calcDurations();
-        };
+        t.onloadedmetadata = () => { ReaderAudio.playlist.push(path); ReaderAudio.findPart(idx + 1); };
+        t.onerror = () => { ReaderAudio.calcDurations(); };
     },
     
     calcDurations: () => {
@@ -470,7 +493,7 @@ const ReaderAudio = {
         });
     },
     
-    toggleUI: () => document.getElementById('audioPlayerPopup').classList.toggle('visible'),
+    toggleUI: () => { if(ReaderAudio.playlist.length > 0) ReaderAudio.scanFiles(); },
     hide: () => document.getElementById('audioPlayerPopup').classList.remove('visible'),
     
     togglePlay: () => {
@@ -537,8 +560,6 @@ const ReaderAudio = {
         document.getElementById('scrubber').value = pct;
         document.getElementById('waveFill').style.width = pct + "%";
         document.getElementById('timeCurr').innerText = ReaderAudio.fmtTime(cur);
-        
-        if(ReaderScroll.active && !ReaderAudio.player.paused) { /* Handled in scroll loop */ }
     },
     
     handleScrub: (val) => {
@@ -554,7 +575,6 @@ const ReaderAudio = {
             ReaderAudio.player.play().then(() => {
                 ReaderAudio.player.currentTime = offset;
             });
-            ReaderAudio.updateUI(true);
         } else {
             ReaderAudio.player.currentTime = offset;
         }
@@ -578,10 +598,10 @@ const ReaderAudio = {
         const m = Math.floor(s/60);
         const sec = Math.floor(s%60);
         return `${m}:${sec<10?'0':''}${sec}`;
-    }
+    },
+    get isPlaying() { return !ReaderAudio.player.paused; }
 };
 
-// --- READER SCROLL ---
 const ReaderScroll = {
     active: false,
     toggle: () => {
@@ -602,7 +622,7 @@ const ReaderScroll = {
     loop: () => {
         if(!ReaderScroll.active) return;
         let speed = parseInt(document.getElementById('scrollSpeedLabel').innerText) || 1;
-        if(!ReaderAudio.player.paused) speed = 0.5; // Slow down when reading
+        if(ReaderAudio.isPlaying) speed = 0.25; // Slower when reading
         
         window.scrollBy(0, speed);
         if((window.innerHeight + window.pageYOffset) >= document.body.offsetHeight - 10) {
