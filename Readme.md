@@ -39,6 +39,34 @@ It treats a standard file system (Markdown text and MP3 audio) as a database, fe
 ### 🔍 Search
 - **Client-Side Indexing:** Performs lightning-fast searches using a pre-generated JSON index of the entire text.
 
+### 🔗 Deep Linking
+WordWideWeb supports hash-based URL routing, allowing you to share direct links to specific content. This works on static hosting (GitHub Pages) without server configuration.
+
+#### URL Patterns
+
+| Route | URL Pattern | Example |
+|-------|-------------|---------|
+| Home | `#/` | `https://example.com/#/` |
+| Book Selection | `#/book/{book}` | `#/book/Genesis` |
+| Chapter Reading | `#/read/{book}/{chapter}` | `#/read/Genesis/1` |
+| Reading Plans | `#/plans` | `#/plans` |
+| Specific Plan | `#/plans/{planId}` | `#/plans/bible-in-a-year` |
+| Search | `#/search/{query}` | `#/search/grace` |
+
+#### Book Names with Spaces
+For books with spaces in the name, use underscores or URL encoding:
+- `#/read/1_Samuel/3` (underscore)
+- `#/read/1%20Samuel/3` (URL encoded)
+
+#### Sharing Chapters
+When reading a chapter, tap the **share icon** (share) in the header to:
+- On mobile: Use the native share sheet (Web Share API)
+- On desktop: Copy the link to clipboard
+
+#### Browser Navigation
+- Use browser **back/forward** buttons to navigate through your reading history
+- The URL updates automatically as you browse books, chapters, and plans
+
 ## 🏗️ Technical Architecture
 
 The application is built with Vanilla JavaScript (ES6+) and CSS Variables, requiring no build frameworks (React/Vue) or bundlers.
@@ -100,10 +128,12 @@ We are actively developing new features. Here is the priority list:
   - Preview mode before subscribing
   - Support for calendar-based and subscription-based plans
 
-- **Deep Linking:** 🔜 NEXT
-  - Support for URL routing (e.g., `.../index.html#Genesis_1`)
-  - Allow sharing direct links to specific chapters
+- **Deep Linking:** ✅ IMPLEMENTED
+  - Hash-based URL routing for static hosting compatibility
+  - Shareable links to specific chapters (e.g., `#/read/Genesis/1`)
   - Browser back/forward navigation support
+  - Mobile share functionality with Web Share API
+  - Direct links to books, plans, and search queries
 
 - **Font & Theme Customization:**
   - Settings menu to adjust font face (Serif/Sans), size, and line height

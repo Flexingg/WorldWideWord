@@ -8,6 +8,117 @@ const BOOKS = [{"n":"Genesis","c":50},{"n":"Exodus","c":40},{"n":"Leviticus","c"
 const BOOK_ORDER = {};
 BOOKS.forEach((b, i) => BOOK_ORDER[b.n] = i);
 
+// --- ROUTER (Hash-based for static hosting compatibility) ---
+const Router = {
+    currentRoute: null,
+    isNavigating: false, // Flag to prevent recursive navigation
+    
+    init: () => {
+        window.addEventListener('hashchange', Router.onHashChange);
+        Router.handleInitialRoute();
+    },
+    
+    handleInitialRoute: () => {
+        const hash = window.location.hash;
+        if(hash && hash.length > 1) {
+            Router.handleRoute(Router.parseRoute(hash));
+        }
+    },
+    
+    parseRoute: (hash) => {
+        // Remove leading # and /
+        const path = hash.replace(/^#/, '').replace(/^\//, '');
+        const parts = path.split('/').filter(p => p);
+        
+        if(parts.length === 0) return { type: 'home' };
+        
+        // Decode URI components for book names with spaces
+        if(parts[0] === 'book' && parts[1]) {
+            return { type: 'book', book: decodeURIComponent(parts[1].replace(/_/g, ' ')) };
+        }
+        if(parts[0] === 'read' && parts[1] && parts[2]) {
+            return { 
+                type: 'read', 
+                book: decodeURIComponent(parts[1].replace(/_/g, ' ')), 
+                chapter: parseInt(parts[2]),
+                verse: parts[3] ? parseInt(parts[3]) : null
+            };
+        }
+        if(parts[0] === 'plans' && parts[1]) {
+            return { type: 'plan', planId: parts[1] };
+        }
+        if(parts[0] === 'plans') {
+            return { type: 'plans' };
+        }
+        if(parts[0] === 'search' && parts[1]) {
+            return { type: 'search', query: decodeURIComponent(parts[1].replace(/_/g, ' ')) };
+        }
+        
+        return { type: 'home' };
+    },
+    
+    // Navigate to a route (updates URL hash)
+    navigate: (path) => {
+        if(Router.isNavigating) return;
+        Router.isNavigating = true;
+        window.location.hash = path;
+        setTimeout(() => { Router.isNavigating = false; }, 50);
+    },
+    
+    // Handle hash change event
+    onHashChange: () => {
+        if(Router.isNavigating) return;
+        const route = Router.parseRoute(window.location.hash);
+        Router.handleRoute(route);
+    },
+    
+    // Route handler - dispatches to appropriate view
+    handleRoute: (route) => {
+        Router.currentRoute = route;
+        
+        switch(route.type) {
+            case 'home':
+                Selector.reset(true);
+                break;
+            case 'book':
+                const book = BOOKS.find(b => b.n === route.book);
+                if(book) Selector.openBook(book, true);
+                else Selector.reset(true);
+                break;
+            case 'read':
+                const name = `${route.book} ${route.chapter}`;
+                const path = `bibles/BSB/BER-${route.book}/${name}.md`;
+                Reader.load(path, name, true);
+                break;
+            case 'plans':
+                ReadingPlans.showDashboard(true);
+                break;
+            case 'plan':
+                ReadingPlans.loadPlan(route.planId).then(plan => {
+                    if(plan) ReadingPlans.showPlanGrid(route.planId, true);
+                    else ReadingPlans.showDashboard(true);
+                });
+                break;
+            case 'search':
+                Selector.toggleSearchMode(true, route.query, true);
+                break;
+            default:
+                Selector.reset(true);
+        }
+    },
+    
+    // Get current URL for sharing
+    getCurrentURL: () => {
+        return window.location.href;
+    },
+    
+    // Build shareable URL for a chapter
+    buildChapterURL: (book, chapter) => {
+        const encodedBook = encodeURIComponent(book).replace(/%20/g, '_');
+        return `${window.location.origin}${window.location.pathname}#/read/${encodedBook}/${chapter}`;
+    }
+};
+
 // --- APP STATE ---
 const App = {
     init: () => {
@@ -15,6 +126,9 @@ const App = {
         if(theme) App.applyTheme(theme);
         Selector.init();
         ReadingPlans.init();
+        
+        // Initialize router (handles initial URL and hash changes)
+        Router.init();
         
         const autoS = AppAPI.getGlobal("BibleAutoSearch");
         if(autoS) {
@@ -32,10 +146,12 @@ const App = {
         AppAPI.setGlobal("BibleThemeMode", next);
     },
     navBack: () => {
-        if (!document.getElementById('view-reader').classList.contains('hidden')) App.goHome();
-        else if (!document.getElementById('view-plans-grid').classList.contains('hidden')) ReadingPlans.showDashboard();
-        else if (!document.getElementById('view-plans').classList.contains('hidden')) ReadingPlans.hideDashboard();
-        else Selector.reset();
+        // Use browser history for back navigation
+        if(window.location.hash && window.location.hash.length > 1) {
+            window.history.back();
+        } else {
+            App.goHome();
+        }
     },
     goHome: () => {
         document.getElementById('view-reader').classList.add('hidden');
@@ -44,6 +160,7 @@ const App = {
         document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnAudio').classList.add('hidden');
+        document.getElementById('btnShare').classList.add('hidden');
         document.getElementById('btnNextChap').classList.add('hidden');
         document.getElementById('btnStop').classList.add('hidden');
         document.getElementById('btnHistory').classList.remove('hidden');
@@ -51,8 +168,11 @@ const App = {
         document.getElementById('headerLabel').innerText = "The Bible";
         ReaderAudio.stop();
         
+        // Update URL
+        Router.navigate('/');
+        
         // Ensure we are on the Book Grid (Force Reset)
-        Selector.reset(); 
+        Selector.reset(true); 
     }
 };
 
@@ -74,13 +194,13 @@ const Selector = {
         });
     },
 
-    openBook: (b) => {
+    openBook: (b, skipRouteUpdate = false) => {
         document.getElementById('headerLabel').innerText = b.n;
         document.getElementById('bookGrid').classList.add('hidden');
         document.getElementById('searchList').classList.add('hidden');
         document.querySelector('.search-wrapper').classList.add('hidden');
         document.getElementById('btnBack').classList.remove('hidden');
-        document.getElementById('btnBack').onclick = Selector.reset;
+        document.getElementById('btnBack').onclick = App.navBack;
         document.getElementById('btnHistory').classList.add('hidden');
         
         const grid = document.getElementById('chapterGrid');
@@ -95,9 +215,15 @@ const Selector = {
             el.onclick = () => Reader.load(path, name);
             grid.appendChild(el);
         }
+        
+        // Update URL if not called from router
+        if(!skipRouteUpdate) {
+            const encodedBook = encodeURIComponent(b.n).replace(/%20/g, '_');
+            Router.navigate(`/book/${encodedBook}`);
+        }
     },
 
-    toggleSearchMode: (forceOn = false, initialQuery = "") => {
+    toggleSearchMode: (forceOn = false, initialQuery = "", skipRouteUpdate = false) => {
         Selector.isSearch = forceOn ? true : !Selector.isSearch;
         const btn = document.getElementById('btnMode');
         const input = document.getElementById('searchInput');
@@ -114,6 +240,12 @@ const Selector = {
                 // If query has brackets, remove them for input display
                 input.value = initialQuery.replace(/[\[\]]/g, "");
                 Selector.performSearch(initialQuery);
+                
+                // Update URL if not called from router
+                if(!skipRouteUpdate) {
+                    const encodedQuery = encodeURIComponent(initialQuery).replace(/%20/g, '_');
+                    Router.navigate(`/search/${encodedQuery}`);
+                }
             } else {
                 document.getElementById('searchList').innerHTML = '<div style="text-align:center;opacity:0.5;margin-top:20px">Type word and press Enter</div>';
                 setTimeout(() => input.focus(), 100);
@@ -204,7 +336,7 @@ const Selector = {
             document.getElementById('bookGrid').classList.add('hidden');
             document.querySelector('.search-wrapper').classList.add('hidden');
             document.getElementById('btnBack').classList.remove('hidden');
-            document.getElementById('btnBack').onclick = Selector.reset;
+            document.getElementById('btnBack').onclick = App.navBack;
             document.getElementById('headerLabel').innerText = "History";
             
             const raw = AppAPI.getGlobal("BibleHistory");
@@ -224,7 +356,7 @@ const Selector = {
         }
     },
 
-    reset: () => {
+    reset: (skipRouteUpdate = false) => {
         Selector.isSearch = false;
         document.getElementById('btnMode').classList.remove('active');
         document.getElementById('searchInput').value = "";
@@ -243,6 +375,11 @@ const Selector = {
         document.getElementById('btnHistory').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
         Selector.renderBooks(BOOKS);
+        
+        // Update URL if not called from router
+        if(!skipRouteUpdate) {
+            Router.navigate('/');
+        }
     }
 };
 
@@ -254,7 +391,7 @@ const Reader = {
     selectionIds: new Set(),
     selectedType: null,
 
-    load: async (path, name) => {
+    load: async (path, name, skipRouteUpdate = false) => {
         document.getElementById('view-selector').classList.add('hidden');
         document.getElementById('view-reader').classList.remove('hidden');
         document.getElementById('readerLoading').classList.remove('hidden');
@@ -262,7 +399,8 @@ const Reader = {
         
         document.getElementById('headerLabel').innerText = name;
         document.getElementById('btnBack').classList.remove('hidden');
-        document.getElementById('btnBack').onclick = App.goHome;
+        document.getElementById('btnBack').onclick = App.navBack;
+        document.getElementById('btnShare').classList.remove('hidden');
         document.getElementById('btnNextChap').classList.remove('hidden');
         document.getElementById('btnHistory').classList.add('hidden');
         
@@ -270,6 +408,14 @@ const Reader = {
         Reader.currentName = name;
         AppAPI.setGlobal("BibleLastRead", path);
         Reader.updateHistory(name);
+        
+        // Update URL if not called from router
+        if(!skipRouteUpdate) {
+            const parts = name.split(" ");
+            const num = parseInt(parts[parts.length-1]);
+            const book = parts.slice(0, parts.length-1).join(" ");
+            Router.navigate(`/read/${encodeURIComponent(book).replace(/%20/g, '_')}/${num}`);
+        }
 
         const md = await AppAPI.readFile(path);
         if(!md) {
@@ -436,6 +582,28 @@ const Reader = {
         else document.querySelectorAll('.w.ui-selected').forEach(e => t+=e.innerText+" ");
         AppAPI.copy(t);
         Reader.clearSel();
+    },
+    
+    // Share functionality
+    shareChapter: async () => {
+        const parts = Reader.currentName.split(" ");
+        const num = parseInt(parts[parts.length-1]);
+        const book = parts.slice(0, parts.length-1).join(" ");
+        const url = Router.buildChapterURL(book, num);
+        const title = `${Reader.currentName} - WordWideWeb`;
+        
+        if(navigator.share) {
+            try {
+                await navigator.share({ title, url });
+            } catch(e) {
+                // User cancelled or share failed, fallback to copy
+                AppAPI.copy(url);
+                alert('Link copied to clipboard!');
+            }
+        } else {
+            AppAPI.copy(url);
+            alert('Link copied to clipboard!');
+        }
     }
 };
 
@@ -698,14 +866,19 @@ const ReadingPlans = {
     },
     
     // UI: Show Plans Dashboard
-    showDashboard: async () => {
+    showDashboard: async (skipRouteUpdate = false) => {
         document.getElementById('view-selector').classList.add('hidden');
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-plans').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "Reading Plans";
         document.getElementById('btnBack').classList.remove('hidden');
-        document.getElementById('btnBack').onclick = ReadingPlans.hideDashboard;
+        document.getElementById('btnBack').onclick = App.navBack;
         document.getElementById('btnHistory').classList.add('hidden');
+        
+        // Update URL if not called from router
+        if(!skipRouteUpdate) {
+            Router.navigate('/plans');
+        }
         
         const loader = document.getElementById('plansLoader');
         const list = document.getElementById('plansList');
@@ -744,7 +917,7 @@ const ReadingPlans = {
                 ` : `
                     <div class="plan-meta">${plan.totalDays} days • Tap to preview</div>
                     <div class="plan-actions">
-                        <button class="btn-fill" onclick="event.stopPropagation(); ReadingPlans.subscribe('${plan.id}'); ReadingPlans.showPlanGrid '${plan.id}');">Subscribe</button>
+                        <button class="btn-fill" onclick="event.stopPropagation(); ReadingPlans.subscribe('${plan.id}'); ReadingPlans.showPlanGrid('${plan.id}');">Subscribe</button>
                         <button class="btn-text" onclick="ReadingPlans.showPreview('${plan.id}')">Preview</button>
                     </div>
                 `}
@@ -763,20 +936,15 @@ const ReadingPlans = {
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnHistory').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
+        
+        // Update URL to home
+        Router.navigate('/');
     },
     
     // UI: Show Plan Preview (before subscribing) - same as grid view
-    showPreview: async (planId) => {
+    showPreview: (planId) => {
         const plan = ReadingPlans.loadedPlans[planId];
         if(!plan) return;
-        
-        const isSubscribed = ReadingPlans.isSubscribed(planId);
-        
-        // If already subscribed, just open the grid
-        if(isSubscribed) {
-            ReadingPlans.showPlanGrid(planId);
-            return;
-        }
         
         ReadingPlans.expandedDays.clear();
         
@@ -867,7 +1035,7 @@ const ReadingPlans = {
     },
     
     // UI: Show Plan Grid (compact view of all days)
-    showPlanGrid: async (planId) => {
+    showPlanGrid: (planId, skipRouteUpdate = false) => {
         const plan = ReadingPlans.loadedPlans[planId];
         if(!plan) return;
         
@@ -877,7 +1045,12 @@ const ReadingPlans = {
         document.getElementById('view-plans-preview').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = plan.name;
-        document.getElementById('btnBack').onclick = ReadingPlans.hideDashboard;
+        document.getElementById('btnBack').onclick = App.navBack;
+        
+        // Update URL if not called from router
+        if(!skipRouteUpdate) {
+            Router.navigate(`/plans/${planId}`);
+        }
         
         const currentDay = ReadingPlans.getCurrentDay(planId, plan);
         
