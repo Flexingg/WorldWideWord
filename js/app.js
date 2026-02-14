@@ -1,11 +1,13 @@
 /**
- * WordWideWeb - Core Logic
+ * WordWideWeb - Pure Web Logic
  */
 
-const REPO_ROOT = "./"; 
 const BOOKS = [{"n":"Genesis","c":50},{"n":"Exodus","c":40},{"n":"Leviticus","c":27},{"n":"Numbers","c":36},{"n":"Deuteronomy","c":34},{"n":"Joshua","c":24},{"n":"Judges","c":21},{"n":"Ruth","c":4},{"n":"1 Samuel","c":31},{"n":"2 Samuel","c":24},{"n":"1 Kings","c":22},{"n":"2 Kings","c":25},{"n":"1 Chronicles","c":29},{"n":"2 Chronicles","c":36},{"n":"Ezra","c":10},{"n":"Nehemiah","c":13},{"n":"Esther","c":10},{"n":"Job","c":42},{"n":"Psalms","c":150},{"n":"Proverbs","c":31},{"n":"Ecclesiastes","c":12},{"n":"Song of Solomon","c":8},{"n":"Isaiah","c":66},{"n":"Jeremiah","c":52},{"n":"Lamentations","c":5},{"n":"Ezekiel","c":48},{"n":"Daniel","c":12},{"n":"Hosea","c":14},{"n":"Joel","c":3},{"n":"Amos","c":9},{"n":"Obadiah","c":1},{"n":"Jonah","c":4},{"n":"Micah","c":7},{"n":"Nahum","c":3},{"n":"Habakkuk","c":3},{"n":"Zephaniah","c":3},{"n":"Haggai","c":2},{"n":"Zechariah","c":14},{"n":"Malachi","c":4},{"n":"Matthew","c":28},{"n":"Mark","c":16},{"n":"Luke","c":24},{"n":"John","c":21},{"n":"Acts","c":28},{"n":"Romans","c":16},{"n":"1 Corinthians","c":16},{"n":"2 Corinthians","c":13},{"n":"Galatians","c":6},{"n":"Ephesians","c":6},{"n":"Philippians","c":4},{"n":"Colossians","c":4},{"n":"1 Thessalonians","c":5},{"n":"2 Thessalonians","c":3},{"n":"1 Timothy","c":6},{"n":"2 Timothy","c":4},{"n":"Titus","c":3},{"n":"Philemon","c":1},{"n":"Hebrews","c":13},{"n":"James","c":5},{"n":"1 Peter","c":5},{"n":"2 Peter","c":3},{"n":"1 John","c":5},{"n":"2 John","c":1},{"n":"3 John","c":1},{"n":"Jude","c":1},{"n":"Revelation","c":22}];
 
-// --- APP STATE ---
+// Helper for Book Sorting
+const BOOK_ORDER = {};
+BOOKS.forEach((b, i) => BOOK_ORDER[b.n] = i);
+
 const App = {
     init: () => {
         const theme = AppAPI.getGlobal("BibleThemeMode");
@@ -13,38 +15,27 @@ const App = {
         Selector.init();
         
         const autoS = AppAPI.getGlobal("BibleAutoSearch");
-        if(autoS && autoS.length > 2) {
+        if(autoS) {
             AppAPI.setGlobal("BibleAutoSearch", "");
             Selector.toggleSearchMode(true, autoS);
         }
     },
-
     applyTheme: (t) => {
         document.documentElement.setAttribute('data-theme', t);
         document.getElementById('themeIcon').innerText = t === "light" ? "dark_mode" : "light_mode";
     },
-
     toggleTheme: () => {
-        const cur = document.documentElement.getAttribute('data-theme') || "light";
-        const next = cur === "light" ? "dark" : "light";
+        const next = document.documentElement.getAttribute('data-theme') === "light" ? "dark" : "light";
         App.applyTheme(next);
         AppAPI.setGlobal("BibleThemeMode", next);
     },
-
     navBack: () => {
-        if (!document.getElementById('view-reader').classList.contains('hidden')) {
-            App.goHome();
-        } else {
-            Selector.reset();
-        }
+        if (!document.getElementById('view-reader').classList.contains('hidden')) App.goHome();
+        else Selector.reset();
     },
-
     goHome: () => {
-        // UI Reset
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
-        
-        // Header Controls
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnAudio').classList.add('hidden');
         document.getElementById('btnNextChap').classList.add('hidden');
@@ -52,16 +43,11 @@ const App = {
         document.getElementById('btnHistory').classList.remove('hidden');
         document.querySelector('.search-wrapper').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
-        
-        // Stop Audio
         ReaderAudio.stop();
-        
-        // Ensure we are on the Book Grid (not chapter list or search)
         Selector.reset(); 
     }
 };
 
-// --- SELECTOR ---
 const Selector = {
     isSearch: false,
     searchIndex: null,
@@ -73,7 +59,8 @@ const Selector = {
         const last = AppAPI.getGlobal("BibleLastRead");
         list.forEach(b => {
             const el = document.createElement('div'); el.className = 'card'; el.innerText = b.n;
-            if(last && last.includes(`BER-${b.n}`)) el.classList.add('last-read');
+            // Simplified check since we removed absolute paths
+            if(last && last.includes(b.n)) el.classList.add('last-read');
             el.onclick = () => Selector.openBook(b);
             grid.appendChild(el);
         });
@@ -116,8 +103,8 @@ const Selector = {
             document.getElementById('searchList').classList.remove('hidden');
             
             if(initialQuery) {
-                const displayQuery = initialQuery.replace(/\\\[/g, "[").replace(/\\\]/g, "]");
-                input.value = displayQuery;
+                // If query has brackets, remove them for input display
+                input.value = initialQuery.replace(/[\[\]]/g, "");
                 Selector.performSearch(initialQuery);
             } else {
                 document.getElementById('searchList').innerHTML = '<div style="text-align:center;opacity:0.5;margin-top:20px">Type word and press Enter</div>';
@@ -135,7 +122,7 @@ const Selector = {
     handleSearch: (e) => {
         e.preventDefault();
         const q = document.getElementById('searchInput').value;
-        if(q.length < 3) return;
+        if(q.length < 2) return;
         document.getElementById('searchInput').blur();
         Selector.performSearch(q);
     },
@@ -157,15 +144,26 @@ const Selector = {
             }
         }
         
-        const cleanQ = query.toLowerCase().replace(/\\/g, "").replace(/\[/g, "").replace(/\]/g, "");
+        const cleanQ = query.toLowerCase().replace(/[\[\]]/g, "");
         const results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
         
+        // Canonical Sort
+        results.sort((a, b) => {
+            const getParts = (str) => {
+                const ls = str.lastIndexOf(' ');
+                return [str.substring(0, ls), parseInt(str.substring(ls+1))];
+            };
+            const [bA, cA] = getParts(a.n);
+            const [bB, cB] = getParts(b.n);
+            
+            if (bA !== bB) return (BOOK_ORDER[bA] || 99) - (BOOK_ORDER[bB] || 99);
+            if (cA !== cB) return cA - cB;
+            return parseInt(a.v) - parseInt(b.v);
+        });
+
         loader.classList.remove('visible');
-        if(results.length === 0) {
-            list.innerHTML = '<div style="text-align:center;margin-top:20px">No results found.</div>';
-        } else {
-            Selector.renderResults(results.slice(0, 50));
-        }
+        if(results.length === 0) list.innerHTML = '<div style="text-align:center;margin-top:20px">No results found.</div>';
+        else Selector.renderResults(results.slice(0, 50));
     },
 
     renderResults: (results) => {
@@ -173,7 +171,10 @@ const Selector = {
         results.forEach(item => {
             const el = document.createElement('div'); el.className = 'result-card';
             const badge = item.v ? `<span class="res-badge">Verse ${item.v}</span>` : "";
-            el.innerHTML = `<div class="res-title"><span>${item.n}</span>${badge}</div><div class="res-snippet">${item.t}</div>`;
+            // Clean display snippet
+            const displaySnippet = item.t.replace(/\[\[[HG]\d+\]\]/g, "");
+            
+            el.innerHTML = `<div class="res-title"><span>${item.n}</span>${badge}</div><div class="res-snippet">${displaySnippet || item.t}</div>`;
             el.onclick = () => Reader.load(item.p, item.n);
             list.appendChild(el);
         });
@@ -222,7 +223,6 @@ const Selector = {
         document.getElementById('historyList').classList.add('hidden');
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnHistory').classList.remove('hidden');
-        
         document.getElementById('headerLabel').innerText = "The Bible";
         Selector.renderBooks(BOOKS);
     }
@@ -279,48 +279,32 @@ const Reader = {
                 const vNum = m[1], vText = m[2].trim(), vId = `v-${vNum}`;
                 let wordsHtml = "";
                 
-                // --- ROBUST TOKENIZER ---
-                // Splits by Strongs codes to ensure they are attached to words
+                // Two-Pass Tokenizer for Lexicon
                 const parts = vText.split(/(\[\[[HG]\d+\]\])/);
                 let tokens = [];
-
+                
                 parts.forEach(p => {
                     if (p.match(/^\[\[[HG]\d+\]\]$/)) {
                         const code = p.match(/[HG]\d+/)[0];
-                        // Attach code to the previous word token if it exists
                         for (let i = tokens.length - 1; i >= 0; i--) {
-                            if (tokens[i].type === 'word') {
-                                tokens[i].code = code;
-                                break;
-                            }
+                            if (tokens[i].type === 'word') { tokens[i].code = code; break; }
                         }
                     } else if (p.trim() !== "") {
-                        // Split text by spaces, preserving the spaces as tokens
-                        const sub = p.split(/(\s+)/);
-                        sub.forEach(s => {
+                        p.split(/(\s+)/).forEach(s => {
                             if (!s) return;
-                            if (s.match(/^\s+$/)) {
-                                tokens.push({ type: 'space', text: s });
-                            } else {
-                                tokens.push({ type: 'word', text: s, code: null });
-                            }
+                            s.match(/^\s+$/) ? tokens.push({ type: 'space', text: s }) : tokens.push({ type: 'word', text: s });
                         });
-                    } else if (p.match(/\s+/)) {
-                        tokens.push({ type: 'space', text: p });
-                    }
+                    } else if (p.match(/\s+/)) tokens.push({ type: 'space', text: p });
                 });
                 
-                // Render Tokens to HTML
                 let wIdx = 0;
                 tokens.forEach(t => {
-                    if(t.type === 'space') {
-                        wordsHtml += t.text;
-                    } else {
+                    if(t.type === 'space') wordsHtml += t.text;
+                    else {
                         const wId = `${vId}-w-${wIdx}`;
                         const hl = Reader.highlightData[wId] || "";
                         const lexClass = t.code ? "lexicon-word" : "";
                         const dataAttr = t.code ? `data-code="${t.code}"` : "";
-                        
                         wordsHtml += `<span id="${wId}" class="w ${hl} ${lexClass}" ${dataAttr} onclick="Reader.wordClick(event, '${wId}')">${t.text}</span>`;
                         wIdx++;
                     }
@@ -328,9 +312,7 @@ const Reader = {
 
                 const vHl = Reader.highlightData[vId] || "";
                 html += `<div class="verse-block ${vHl}" id="${vId}"><span class="verse-num" onclick="Reader.verseClick(event, '${vId}')">${vNum}</span>${wordsHtml}</div>`;
-            } else if(c.length > 5) {
-                html += `<div style="padding:16px; font-style:italic">${c}</div>`;
-            }
+            } else if(c.length > 5) html += `<div style="padding:16px; font-style:italic">${c}</div>`;
         });
         document.getElementById('contentArea').innerHTML = html;
     },
@@ -361,25 +343,19 @@ const Reader = {
         else { Reader.selectionIds.add(id); el.classList.add('ui-selected'); }
         Reader.updateMenu();
     },
-    
     updateMenu: () => {
         const m = document.getElementById('selectionIsland');
         let hasCode = false;
-        Reader.selectionIds.forEach(id => { 
-            const el = document.getElementById(id);
-            if(el && el.dataset.code) hasCode=true; 
-        });
+        Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el && el.dataset.code) hasCode=true; });
         document.getElementById('rowWordTools').style.display = hasCode ? 'flex' : 'none';
         document.getElementById('sepWordTools').style.display = hasCode ? 'block' : 'none';
         m.classList.toggle('visible', Reader.selectionIds.size > 0);
     },
-    
     clearSel: () => {
-        Reader.selectionIds.forEach(id => document.getElementById(id).classList.remove('ui-selected'));
+        Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.remove('ui-selected'); });
         Reader.selectionIds.clear();
         document.getElementById('selectionIsland').classList.remove('visible');
     },
-    
     applyColor: (c) => {
         Reader.selectionIds.forEach(id => {
             const el = document.getElementById(id);
@@ -390,17 +366,14 @@ const Reader = {
         AppAPI.saveData(Reader.currentPath + ".json", JSON.stringify(Reader.highlightData));
         Reader.clearSel();
     },
-    
     findUsage: () => {
         let code = null;
         Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code = el.dataset.code; });
         if(code) {
-            // Use escaped brackets so Regex logic in Search knows it's a code
-            AppAPI.setGlobal("BibleAutoSearch", `\\[\\[${code}\\]\\]`);
+            AppAPI.setGlobal("BibleAutoSearch", `[[${code}]]`); // Wrap brackets
             App.goHome(); 
         }
     },
-    
     getDefinition: async () => {
         let code = null;
         Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code=el.dataset.code; });
@@ -466,24 +439,20 @@ const ReaderAudio = {
     },
     
     scanFiles: () => { ReaderAudio.playlist = []; ReaderAudio.findPart(0); },
-    
     findPart: (idx) => {
         const path = `${ReaderAudio.folder}part_${idx}.mp3`;
         const t = new Audio(path);
         t.onloadedmetadata = () => { ReaderAudio.playlist.push(path); ReaderAudio.findPart(idx + 1); };
         t.onerror = () => { ReaderAudio.calcDurations(); };
     },
-    
     calcDurations: () => {
         ReaderAudio.partDurations = new Array(ReaderAudio.playlist.length).fill(0);
         let loaded = 0;
         document.getElementById('audioPlayerPopup').classList.add('visible');
-        
         ReaderAudio.playlist.forEach((src, i) => {
             const t = new Audio(src);
             t.onloadedmetadata = () => {
-                ReaderAudio.partDurations[i] = t.duration;
-                loaded++;
+                ReaderAudio.partDurations[i] = t.duration; loaded++;
                 if(loaded === ReaderAudio.playlist.length) {
                     ReaderAudio.totalDuration = ReaderAudio.partDurations.reduce((a,b)=>a+b, 0);
                     document.getElementById('timeTotal').innerText = ReaderAudio.fmtTime(ReaderAudio.totalDuration);
@@ -492,113 +461,56 @@ const ReaderAudio = {
             };
         });
     },
-    
     toggleUI: () => { if(ReaderAudio.playlist.length > 0) ReaderAudio.scanFiles(); },
     hide: () => document.getElementById('audioPlayerPopup').classList.remove('visible'),
-    
-    togglePlay: () => {
-        if(ReaderAudio.player.paused) {
-            ReaderAudio.playTrack(ReaderAudio.currentTrack);
-        } else {
-            ReaderAudio.player.pause();
-            ReaderAudio.updateUI(false);
-        }
-    },
+    togglePlay: () => { if(ReaderAudio.player.paused) ReaderAudio.playTrack(ReaderAudio.currentTrack); else { ReaderAudio.player.pause(); ReaderAudio.updateUI(false); } },
     
     playTrack: (idx) => {
         if(idx >= ReaderAudio.playlist.length) { ReaderAudio.stop(); return; }
-        
         if(ReaderAudio.currentTrack !== idx || ReaderAudio.player.src === "") {
             ReaderAudio.player.src = ReaderAudio.playlist[idx];
             ReaderAudio.player.load();
         }
-        
         ReaderAudio.currentTrack = idx;
         const savedSpeed = parseFloat(AppAPI.getGlobal("BibleAudioSpeed") || 1.0);
         ReaderAudio.player.playbackRate = savedSpeed;
         
-        ReaderAudio.player.play()
-            .then(() => ReaderAudio.updateUI(true))
-            .catch(e => console.log("Play error", e));
+        ReaderAudio.player.play().then(() => ReaderAudio.updateUI(true)).catch(e => console.log("Play error", e));
     },
-    
     stop: () => {
-        ReaderAudio.player.pause();
-        ReaderAudio.player.currentTime = 0;
-        ReaderAudio.currentTrack = 0;
+        ReaderAudio.player.pause(); ReaderAudio.player.currentTime = 0; ReaderAudio.currentTrack = 0;
         document.getElementById('audioPlayerPopup').classList.remove('visible');
         ReaderAudio.updateUI(false);
         document.getElementById('btnStop').classList.add('hidden');
         document.getElementById('btnAudio').classList.remove('audio-playing');
     },
-    
     next: () => ReaderAudio.playTrack(ReaderAudio.currentTrack + 1),
-    
     updateUI: (playing) => {
-        const fab = document.getElementById('fabPlay');
-        const btnStop = document.getElementById('btnStop');
-        const btnAudio = document.getElementById('btnAudio');
-        
-        if(playing) {
-            fab.innerHTML = '<span class="material-icons-round" style="font-size:36px">pause</span>';
-            btnStop.classList.remove('hidden');
-            btnAudio.classList.add('audio-playing');
-        } else {
-            fab.innerHTML = '<span class="material-icons-round" style="font-size:36px">play_arrow</span>';
-            btnStop.classList.add('hidden');
-            btnAudio.classList.remove('audio-playing');
-        }
+        const fab = document.getElementById('fabPlay'); const btnStop = document.getElementById('btnStop'); const btnAudio = document.getElementById('btnAudio');
+        if(playing) { fab.innerHTML = '<span class="material-icons-round" style="font-size:36px">pause</span>'; btnStop.classList.remove('hidden'); btnAudio.classList.add('audio-playing'); }
+        else { fab.innerHTML = '<span class="material-icons-round" style="font-size:36px">play_arrow</span>'; btnStop.classList.add('hidden'); btnAudio.classList.remove('audio-playing'); }
     },
-    
     updateScrubber: () => {
         if (ReaderAudio.totalDuration === 0) return;
-        let prevTime = 0;
-        for(let i=0; i<ReaderAudio.currentTrack; i++) prevTime += ReaderAudio.partDurations[i];
+        let prevTime = 0; for(let i=0; i<ReaderAudio.currentTrack; i++) prevTime += ReaderAudio.partDurations[i];
         const cur = prevTime + ReaderAudio.player.currentTime;
         const pct = (cur / ReaderAudio.totalDuration) * 100;
-        
         document.getElementById('scrubber').value = pct;
         document.getElementById('waveFill').style.width = pct + "%";
         document.getElementById('timeCurr').innerText = ReaderAudio.fmtTime(cur);
     },
-    
     handleScrub: (val) => {
         const target = (val / 100) * ReaderAudio.totalDuration;
         let ts = 0, track = 0, offset = 0;
-        for(let i=0; i<ReaderAudio.partDurations.length; i++) {
-            if (target < (ts + ReaderAudio.partDurations[i])) { track = i; offset = target - ts; break; }
-            ts += ReaderAudio.partDurations[i];
-        }
-        if (track !== ReaderAudio.currentTrack) {
-            ReaderAudio.currentTrack = track;
-            ReaderAudio.player.src = ReaderAudio.playlist[track];
-            ReaderAudio.player.play().then(() => {
-                ReaderAudio.player.currentTime = offset;
-            });
-        } else {
-            ReaderAudio.player.currentTime = offset;
-        }
+        for(let i=0; i<ReaderAudio.partDurations.length; i++) { if (target < (ts + ReaderAudio.partDurations[i])) { track = i; offset = target - ts; break; } ts += ReaderAudio.partDurations[i]; }
+        if (track !== ReaderAudio.currentTrack) { ReaderAudio.currentTrack = track; ReaderAudio.player.src = ReaderAudio.playlist[track]; ReaderAudio.player.play(); ReaderAudio.updateUI(true); }
+        ReaderAudio.player.currentTime = offset;
     },
-    
     toggleSpeedPopup: () => document.getElementById('speedControlPopup').classList.toggle('visible'),
-    setSpeed: (v) => { 
-        ReaderAudio.player.playbackRate = parseFloat(v); 
-        document.getElementById('speedLabelVal').innerText = v+"x"; 
-        document.getElementById('btnSpeed').innerText = v+"x";
-        AppAPI.setGlobal("BibleAudioSpeed", v);
-    },
+    setSpeed: (v) => { ReaderAudio.player.playbackRate = parseFloat(v); document.getElementById('speedLabelVal').innerText = v+"x"; document.getElementById('btnSpeed').innerText = v+"x"; AppAPI.setGlobal("BibleAudioSpeed", v); },
     seek: (s) => ReaderAudio.player.currentTime += s,
-    toggleAutoPlay: () => {
-        const n = !(AppAPI.getGlobal("BibleAutoPlay") === 'true');
-        AppAPI.setGlobal("BibleAutoPlay", n ? 'true' : 'false');
-        document.getElementById('btnAutoPlay').classList.toggle('active', n);
-    },
-    fmtTime: (s) => {
-        if(isNaN(s)) return "0:00";
-        const m = Math.floor(s/60);
-        const sec = Math.floor(s%60);
-        return `${m}:${sec<10?'0':''}${sec}`;
-    },
+    toggleAutoPlay: () => { const n = !(AppAPI.getGlobal("BibleAutoPlay") === 'true'); AppAPI.setGlobal("BibleAutoPlay", n ? 'true' : 'false'); document.getElementById('btnAutoPlay').classList.toggle('active', n); },
+    fmtTime: (s) => { if(isNaN(s)) return "0:00"; const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; },
     get isPlaying() { return !ReaderAudio.player.paused; }
 };
 
@@ -608,36 +520,20 @@ const ReaderScroll = {
         ReaderScroll.active = !ReaderScroll.active;
         const btn = document.getElementById('btnAutoScroll');
         const spd = document.getElementById('scrollSpeedBtn');
-        if(ReaderScroll.active) {
-            btn.classList.add('active');
-            btn.querySelector('span:last-child').innerText = "Stop";
-            spd.style.display = 'flex';
-            ReaderScroll.loop();
-        } else {
-            btn.classList.remove('active');
-            btn.querySelector('span:last-child').innerText = "Scroll";
-            spd.style.display = 'none';
-        }
+        if(ReaderScroll.active) { btn.classList.add('active'); btn.querySelector('span:last-child').innerText = "Stop"; spd.style.display = 'flex'; ReaderScroll.loop(); }
+        else { btn.classList.remove('active'); btn.querySelector('span:last-child').innerText = "Scroll"; spd.style.display = 'none'; }
     },
     loop: () => {
         if(!ReaderScroll.active) return;
         let speed = parseInt(document.getElementById('scrollSpeedLabel').innerText) || 1;
-        if(ReaderAudio.isPlaying) speed = 0.25; // Slower when reading
-        
+        if(ReaderAudio.isPlaying) speed = 0.25; 
         window.scrollBy(0, speed);
         if((window.innerHeight + window.pageYOffset) >= document.body.offsetHeight - 10) {
-            if(AppAPI.getGlobal("BibleAutoPlay") === 'true') Reader.navNext();
-            else ReaderScroll.toggle();
-            return;
+            if(AppAPI.getGlobal("BibleAutoPlay") === 'true') Reader.navNext(); else ReaderScroll.toggle(); return;
         }
         requestAnimationFrame(ReaderScroll.loop);
     },
-    cycleSpeed: () => {
-        const el = document.getElementById('scrollSpeedLabel');
-        let s = parseInt(el.innerText);
-        s = s >= 3 ? 1 : s + 1;
-        el.innerText = s + "x";
-    }
+    cycleSpeed: () => { const el = document.getElementById('scrollSpeedLabel'); let s = parseInt(el.innerText); s = s >= 3 ? 1 : s + 1; el.innerText = s + "x"; }
 };
 
 window.onload = App.init;

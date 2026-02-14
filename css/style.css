@@ -125,7 +125,6 @@ header.scrolled {
 .card:active { transform: scale(0.98); background-color: var(--primary-container); }
 .card.last-read { border: 2px solid var(--primary-color); background-color: var(--primary-container); color: var(--on-primary-container); }
 
-/* FIX: Removed display:none from here so .hidden class controls visibility */
 .chapter-list { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); }
 .chapter-card { font-size: 18px; padding: 18px 0; }
 
@@ -209,13 +208,19 @@ header.scrolled {
 .player-header strong { color: var(--text-color); font-weight: 500; font-size: 16px; }
 
 /* Speed Control */
-.speed-btn { background: var(--surface-container); border: none; border-radius: 16px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--primary-color); cursor: pointer; min-width: 50px; }
+.speed-btn { background: var(--surface-container); border: none; border-radius: 16px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--primary-color); cursor: pointer; min-width: 50px; transition: 0.2s; }
+.speed-btn:active { transform: scale(0.95); }
+
 #speedControlPopup { position: absolute; top: 40px; right: 0; background: var(--surface-island); border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); padding: 16px 8px; display: none; flex-direction: column; align-items: center; gap: 16px; z-index: 310; border: 1px solid var(--surface-container); }
 #speedControlPopup.visible { display: flex; animation: fadeIn 0.2s; }
+
+/* Vertical Slider */
 .v-slider-wrapper { width: 40px; height: 160px; display: flex; align-items: center; justify-content: center; }
-.v-slider { width: 150px; height: 40px; background: transparent; transform: rotate(-90deg); -webkit-appearance: none; margin: 0; cursor: pointer; }
-.v-slider::-webkit-slider-runnable-track { width: 100%; height: 6px; background: var(--surface-container); border-radius: 4px; border:none; }
-.v-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: var(--primary-color); margin-top: -7px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+input[type=range].v-slider {
+    -webkit-appearance: none; width: 150px; height: 40px; background: transparent; transform: rotate(-90deg); cursor: pointer; margin: 0;
+}
+input[type=range].v-slider::-webkit-slider-runnable-track { width: 100%; height: 6px; background: var(--surface-container); border-radius: 4px; border:none; }
+input[type=range].v-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: var(--primary-color); margin-top: -7px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
 
 /* Controls */
 .player-controls { display:flex; justify-content:space-between; align-items:center; margin: 4px 0; padding: 0 12px; }
@@ -259,5 +264,3 @@ header.scrolled {
 .spin { display:inline-block; animation:spin 1s infinite linear; font-size:24px; color:var(--primary-color); }
 @keyframes spin { 100% { transform:rotate(360deg); } }
 @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
-
-
