@@ -1,40 +1,33 @@
 /**
  * Adapter: Pure Web Implementation
- * maps app actions to Browser APIs (Fetch, LocalStorage, Audio)
+ * Maps app actions to Browser APIs
  */
 
 const AppAPI = {
-    // 1. READ TEXT (Bible Chapters & Lexicon)
+    // 1. READ TEXT (Relative Fetch)
     readFile: async (path) => {
         try {
-            // Ensure path is relative to repo root
-            // Input: "/storage/.../BSB/BER-Genesis/Genesis 1.md"
-            // Output: "bibles/BSB/BER-Genesis/Genesis 1.md"
-            let webPath = path;
-            if (path.includes("RandallReligion")) {
-                webPath = "bibles/" + path.split("900_The Bible/")[1];
-            }
-            
-            // Add cache busting to prevent stale text edits
-            const res = await fetch(webPath);
-            if (!res.ok) throw new Error(`File not found: ${webPath}`);
+            // Ensure path is relative (remove any absolute garbage if present)
+            // Expecting: "bibles/BSB/..." or "lexicon/..."
+            const res = await fetch(path);
+            if (!res.ok) throw new Error(`404: ${path}`);
             return await res.text();
         } catch (e) {
-            console.error(e);
+            console.error("Read Error:", e);
             return null;
         }
     },
 
     // 2. SAVE DATA (LocalStorage)
     saveData: (key, data) => {
-        // Key example: "/storage/.../Genesis 1.json" -> Clean to "Data_Genesis 1.json"
-        const cleanKey = "User_" + key.split("/").pop(); 
+        // Normalize key to be safe
+        const cleanKey = "User_" + key; 
         localStorage.setItem(cleanKey, data);
     },
 
     // 3. LOAD DATA (LocalStorage)
     loadData: async (key) => {
-        const cleanKey = "User_" + key.split("/").pop();
+        const cleanKey = "User_" + key;
         return localStorage.getItem(cleanKey);
     },
 
@@ -43,7 +36,6 @@ const AppAPI = {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text);
         } else {
-            // Fallback for older browsers/iframes
             const textArea = document.createElement("textarea");
             textArea.value = text;
             document.body.appendChild(textArea);

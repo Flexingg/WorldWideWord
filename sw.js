@@ -1,5 +1,5 @@
-const CACHE_NAME = "bible-reader-v2";
-const STATIC_ASSETS = [
+const CACHE_NAME = "bible-app-v3";
+const ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
@@ -9,50 +9,33 @@ const STATIC_ASSETS = [
   "https://fonts.googleapis.com/icon?family=Material+Icons+Round"
 ];
 
-// 1. INSTALL: Cache App Shell
 self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
+  e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(ASSETS)));
   self.skipWaiting();
 });
 
-// 2. ACTIVATE: Cleanup old caches
 self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => Promise.all(
-      keys.map((k) => {
-        if (k !== CACHE_NAME) return caches.delete(k);
-      })
-    ))
-  );
+  e.waitUntil(caches.keys().then((k) => Promise.all(k.map((n) => { if(n!==CACHE_NAME) return caches.delete(n); }))));
   self.clients.claim();
 });
 
-// 3. FETCH: Handle requests
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-
-  // Strategy A: Stale-While-Revalidate for Bibles & Lexicon (Content)
-  // This allows offline use but updates in the background for next time
-  if (url.pathname.includes("/bibles/") || url.pathname.includes("/lexicon/")) {
+  // Stale-while-revalidate for Bible content
+  if (url.pathname.includes("/bibles/") || url.pathname.includes("/lexicon/") || url.pathname.includes("search_index.json")) {
     e.respondWith(
       caches.open(CACHE_NAME).then((cache) => {
-        return cache.match(e.request).then((cachedResponse) => {
-          const fetchPromise = fetch(e.request).then((networkResponse) => {
-            cache.put(e.request, networkResponse.clone());
-            return networkResponse;
+        return cache.match(e.request).then((cached) => {
+          const fetched = fetch(e.request).then((net) => {
+            cache.put(e.request, net.clone());
+            return net;
           });
-          return cachedResponse || fetchPromise;
+          return cached || fetched;
         });
       })
     );
-    return;
+  } else {
+    // Cache First for app shell
+    e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request)));
   }
-
-  // Strategy B: Cache First for Static Assets (CSS, JS, Fonts)
-  e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request))
-  );
 });
-

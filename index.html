@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Bible PWA</title>
+    <title>WordWideWeb</title>
+    <meta name="description" content="Offline-first Bible Reader">
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,wght@8..144,400;500&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -20,9 +21,13 @@
         </button>
     </div>
     <div style="display:flex; align-items:center" id="headerActions">
-        <button class="nav-btn hidden" id="btnStop" onclick="ReaderAudio.stop()"><span class="material-icons-round">stop_circle</span></button>
-        <button class="nav-btn hidden" id="btnAudio" onclick="ReaderAudio.toggleUI()"><span class="material-icons-round">headphones</span><span id="dlStatus" class="dl-status"></span></button>
+        <!-- Selector Actions -->
+        <button class="icon-btn" id="btnHistory" onclick="Selector.toggleHistory()"><span class="material-icons-round">history</span></button>
+        <!-- Reader Actions -->
+        <button class="nav-btn hidden" id="btnStop" onclick="ReaderAudio.stop()" style="color:var(--primary-color)"><span class="material-icons-round">stop_circle</span></button>
+        <button class="nav-btn hidden" id="btnAudio" onclick="ReaderAudio.toggleUI()"><span class="material-icons-round">headphones</span></button>
         <button class="nav-btn hidden" id="btnNextChap" onclick="Reader.navNext()"><span class="material-icons-round">chevron_right</span></button>
+        <!-- Global -->
         <button class="icon-btn" onclick="App.toggleTheme()"><span class="material-icons-round" id="themeIcon">dark_mode</span></button>
     </div>
 </header>
@@ -41,10 +46,12 @@
                 <span class="material-icons-round">search</span>
             </button>
         </div>
+
         <div id="bookGrid" class="grid"></div>
         <div id="chapterGrid" class="grid chapter-list hidden"></div>
         <div id="searchList" class="list-view hidden"></div>
-        <div id="loader" class="loading hidden"><span class="material-icons-round spin">sync</span><br><span>Processing...</span></div>
+        <div id="historyList" class="list-view hidden"></div>
+        <div id="loader" class="loading hidden"><span class="material-icons-round spin">sync</span><br><span>Searching...</span></div>
     </section>
 
     <!-- VIEW 2: READER -->
@@ -59,6 +66,7 @@
     <div class="player-header">
         <div style="display:flex; flex-direction:column">
             <strong id="audioTrackInfo">Audio</strong>
+            <span style="font-size:12px; opacity:0.7">Narrated Audio</span>
         </div>
         <div style="display:flex; gap:12px; align-items:center; position:relative">
              <button class="speed-btn" id="btnSpeed" onclick="ReaderAudio.toggleSpeedPopup()">1.0x</button>
@@ -73,30 +81,59 @@
         </div>
     </div>
     <div class="player-controls">
+        <button class="ctrl-btn" id="btnAutoPlay" onclick="ReaderAudio.toggleAutoPlay()"><span class="material-icons-round">published_with_changes</span></button>
         <button class="ctrl-btn" onclick="ReaderAudio.seek(-10)"><span class="material-icons-round">replay_10</span></button>
         <button class="play-fab" id="fabPlay" onclick="ReaderAudio.togglePlay()"><span class="material-icons-round">play_arrow</span></button>
         <button class="ctrl-btn" onclick="ReaderAudio.seek(10)"><span class="material-icons-round">forward_10</span></button>
+        <button class="ctrl-btn" onclick="Reader.navNext()"><span class="material-icons-round">skip_next</span></button>
     </div>
     <div class="scrubber-container">
+        <span id="timeCurr">0:00</span>
         <div class="wave-track">
             <div class="wave-bg"></div>
             <div class="wave-fill" id="waveFill"></div>
             <input type="range" class="wavy-slider" id="scrubber" min="0" max="100" value="0" oninput="ReaderAudio.handleScrub(this.value)">
         </div>
+        <span id="timeTotal">--:--</span>
     </div>
 </div>
 
 <!-- SELECTION MENU -->
 <div id="selectionIsland">
+    <!-- Row 1: Word Tools (Hidden by default) -->
     <div class="island-row" id="rowWordTools" style="display:none">
-        <button class="fab-btn" onclick="Reader.getDefinition()"><span class="material-icons-round">local_library</span> Define</button>
+        <button class="fab-btn" onclick="Reader.getDefinition()">
+            <span class="material-icons-round">local_library</span> Define
+        </button>
+        <div class="sep"></div>
+        <button class="fab-btn" onclick="Reader.findUsage()">
+            <span class="material-icons-round">manage_search</span> <span>Usage</span>
+        </button>
     </div>
     <div id="sepWordTools" class="sep-row" style="display:none"></div>
+
+    <!-- Row 2: Actions -->
     <div class="island-row">
-        <button class="fab-btn" onclick="Reader.openNote()"><span class="material-icons-round">edit_note</span> Note</button>
-        <button class="fab-btn" onclick="Reader.clearSel()"><span class="material-icons-round">close</span></button>
+        <button class="fab-btn" id="btnAutoScroll" onclick="ReaderScroll.toggle()">
+            <span class="material-icons-round">unfold_more</span> <span>Scroll</span>
+        </button>
+        <button class="fab-btn" style="display:none" id="scrollSpeedBtn" onclick="ReaderScroll.cycleSpeed()">
+            <span id="scrollSpeedLabel">1x</span>
+        </button>
+        <div class="sep"></div>
+        <button class="fab-btn" onclick="Reader.openNote()">
+            <span class="material-icons-round">edit_note</span> Note
+        </button>
+        <button class="fab-btn" onclick="Reader.copySelection()">
+            <span class="material-icons-round">content_copy</span> Copy
+        </button>
+        <button class="fab-btn" onclick="Reader.clearSelection()">
+            <span class="material-icons-round">close</span>
+        </button>
     </div>
     <div class="sep-row"></div>
+    
+    <!-- Row 3: Colors -->
     <div class="color-dots island-row">
         <div class="swatch s-yellow" onclick="Reader.applyColor('hl-yellow')"></div>
         <div class="swatch s-green" onclick="Reader.applyColor('hl-green')"></div>
@@ -106,29 +143,26 @@
     </div>
 </div>
 
-<!-- LEXICON MODAL -->
+<!-- MODALS -->
 <div id="lexiconModal" onclick="Reader.closeLexicon(event)">
     <div class="modal-card" style="max-height:60vh; overflow-y:auto" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <span style="font-weight:700">Definition</span>
-        </div>
+        <div class="modal-header"><span style="font-weight:700">Definition</span></div>
         <div id="lexiconContent" style="margin-top:16px; font-family:'Roboto',sans-serif">Loading...</div>
     </div>
 </div>
 
-<!-- NOTE MODAL -->
 <div id="noteModal" onclick="Reader.closeNote(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <span id="noteTitle">Note</span>
-        </div>
+        <div class="modal-header"><span id="noteTitle">Note</span></div>
         <textarea id="noteInput" placeholder="Write thoughts..."></textarea>
         <div class="modal-actions">
-            <button class="btn-text" onclick="Reader.saveNote()">Save</button>
+            <button class="btn-text" onclick="Reader.deleteNote()">Delete</button>
+            <button class="btn-fill" onclick="Reader.saveNote()">Save</button>
         </div>
     </div>
 </div>
 
+<!-- SCRIPTS -->
 <script src="js/adapter.js"></script>
 <script src="js/app.js"></script>
 <script>
