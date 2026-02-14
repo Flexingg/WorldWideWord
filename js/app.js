@@ -49,7 +49,9 @@ const App = {
         document.getElementById('btnStop').classList.add('hidden');
         document.getElementById('btnHistory').classList.remove('hidden');
         document.querySelector('.search-wrapper').classList.remove('hidden');
-        document.getElementById('pageTitle').innerText = "The Bible";
+        
+        // Fixed: Use headerLabel instead of pageTitle
+        document.getElementById('headerLabel').innerText = "The Bible";
         ReaderAudio.stop();
     }
 };
@@ -73,7 +75,8 @@ const Selector = {
     },
 
     openBook: (b) => {
-        document.getElementById('pageTitle').innerText = b.n;
+        // Fixed: Use headerLabel
+        document.getElementById('headerLabel').innerText = b.n;
         document.getElementById('bookGrid').classList.add('hidden');
         document.getElementById('searchList').classList.add('hidden');
         document.querySelector('.search-wrapper').classList.add('hidden');
@@ -181,7 +184,9 @@ const Selector = {
             document.querySelector('.search-wrapper').classList.add('hidden');
             document.getElementById('btnBack').classList.remove('hidden');
             document.getElementById('btnBack').onclick = Selector.reset;
-            document.getElementById('pageTitle').innerText = "History";
+            
+            // Fixed: Use headerLabel
+            document.getElementById('headerLabel').innerText = "History";
             
             const raw = AppAPI.getGlobal("BibleHistory");
             hList.innerHTML = '';
@@ -216,7 +221,9 @@ const Selector = {
         document.getElementById('historyList').classList.add('hidden');
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnHistory').classList.remove('hidden');
-        document.getElementById('pageTitle').innerText = "The Bible";
+        
+        // Fixed: Use headerLabel
+        document.getElementById('headerLabel').innerText = "The Bible";
         Selector.renderBooks(BOOKS);
     }
 };
@@ -235,7 +242,8 @@ const Reader = {
         document.getElementById('readerLoading').classList.remove('hidden');
         document.getElementById('contentArea').innerHTML = "";
         
-        document.getElementById('pageTitle').innerText = name;
+        // Fixed: Use headerLabel
+        document.getElementById('headerLabel').innerText = name;
         document.getElementById('btnBack').classList.remove('hidden');
         document.getElementById('btnBack').onclick = App.goHome;
         document.getElementById('btnNextChap').classList.remove('hidden');
@@ -335,7 +343,7 @@ const Reader = {
         Reader.selectionIds.forEach(id => { if(document.getElementById(id).dataset.code) hasCode=true; });
         document.getElementById('rowWordTools').style.display = hasCode ? 'flex' : 'none';
         document.getElementById('sepWordTools').style.display = hasCode ? 'block' : 'none';
-        if(Reader.selectionIds.size > 0) m.classList.add('visible'); else m.classList.remove('visible');
+        m.classList.toggle('visible', Reader.selectionIds.size > 0);
     },
     clearSel: () => {
         Reader.selectionIds.forEach(id => document.getElementById(id).classList.remove('ui-selected'));
@@ -377,6 +385,7 @@ const Reader = {
     closeLexicon: (e) => { if(!e || e.target.id === "lexiconModal") document.getElementById('lexiconModal').classList.remove('open'); },
     
     openNote: async () => {
+        // Fixed: Use headerLabel
         document.getElementById('noteTitle').innerText = Reader.currentName;
         const key = "Note_" + Reader.currentName;
         const val = await AppAPI.loadData(key);
@@ -461,25 +470,33 @@ const ReaderAudio = {
         });
     },
     
-    toggleUI: () => {
-        if(ReaderAudio.playlist.length > 0) ReaderAudio.scanFiles();
-    },
+    toggleUI: () => document.getElementById('audioPlayerPopup').classList.toggle('visible'),
     hide: () => document.getElementById('audioPlayerPopup').classList.remove('visible'),
     
     togglePlay: () => {
-        if(ReaderAudio.player.paused) ReaderAudio.player.play();
-        else ReaderAudio.player.pause();
-        ReaderAudio.updateUI(!ReaderAudio.player.paused);
+        if(ReaderAudio.player.paused) {
+            ReaderAudio.playTrack(ReaderAudio.currentTrack);
+        } else {
+            ReaderAudio.player.pause();
+            ReaderAudio.updateUI(false);
+        }
     },
     
     playTrack: (idx) => {
         if(idx >= ReaderAudio.playlist.length) { ReaderAudio.stop(); return; }
+        
+        if(ReaderAudio.currentTrack !== idx || ReaderAudio.player.src === "") {
+            ReaderAudio.player.src = ReaderAudio.playlist[idx];
+            ReaderAudio.player.load();
+        }
+        
         ReaderAudio.currentTrack = idx;
-        ReaderAudio.player.src = ReaderAudio.playlist[idx];
-        const spd = parseFloat(AppAPI.getGlobal("BibleAudioSpeed") || 1.0);
-        ReaderAudio.player.playbackRate = spd;
-        ReaderAudio.player.play();
-        ReaderAudio.updateUI(true);
+        const savedSpeed = parseFloat(AppAPI.getGlobal("BibleAudioSpeed") || 1.0);
+        ReaderAudio.player.playbackRate = savedSpeed;
+        
+        ReaderAudio.player.play()
+            .then(() => ReaderAudio.updateUI(true))
+            .catch(e => console.log("Play error", e));
     },
     
     stop: () => {
@@ -520,6 +537,8 @@ const ReaderAudio = {
         document.getElementById('scrubber').value = pct;
         document.getElementById('waveFill').style.width = pct + "%";
         document.getElementById('timeCurr').innerText = ReaderAudio.fmtTime(cur);
+        
+        if(ReaderScroll.active && !ReaderAudio.player.paused) { /* Handled in scroll loop */ }
     },
     
     handleScrub: (val) => {
@@ -532,10 +551,13 @@ const ReaderAudio = {
         if (track !== ReaderAudio.currentTrack) {
             ReaderAudio.currentTrack = track;
             ReaderAudio.player.src = ReaderAudio.playlist[track];
-            ReaderAudio.player.play();
+            ReaderAudio.player.play().then(() => {
+                ReaderAudio.player.currentTime = offset;
+            });
             ReaderAudio.updateUI(true);
+        } else {
+            ReaderAudio.player.currentTime = offset;
         }
-        ReaderAudio.player.currentTime = offset;
     },
     
     toggleSpeedPopup: () => document.getElementById('speedControlPopup').classList.toggle('visible'),
