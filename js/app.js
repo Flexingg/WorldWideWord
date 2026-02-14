@@ -5,6 +5,10 @@
 const REPO_ROOT = "./"; 
 const BOOKS = [{"n":"Genesis","c":50},{"n":"Exodus","c":40},{"n":"Leviticus","c":27},{"n":"Numbers","c":36},{"n":"Deuteronomy","c":34},{"n":"Joshua","c":24},{"n":"Judges","c":21},{"n":"Ruth","c":4},{"n":"1 Samuel","c":31},{"n":"2 Samuel","c":24},{"n":"1 Kings","c":22},{"n":"2 Kings","c":25},{"n":"1 Chronicles","c":29},{"n":"2 Chronicles","c":36},{"n":"Ezra","c":10},{"n":"Nehemiah","c":13},{"n":"Esther","c":10},{"n":"Job","c":42},{"n":"Psalms","c":150},{"n":"Proverbs","c":31},{"n":"Ecclesiastes","c":12},{"n":"Song of Solomon","c":8},{"n":"Isaiah","c":66},{"n":"Jeremiah","c":52},{"n":"Lamentations","c":5},{"n":"Ezekiel","c":48},{"n":"Daniel","c":12},{"n":"Hosea","c":14},{"n":"Joel","c":3},{"n":"Amos","c":9},{"n":"Obadiah","c":1},{"n":"Jonah","c":4},{"n":"Micah","c":7},{"n":"Nahum","c":3},{"n":"Habakkuk","c":3},{"n":"Zephaniah","c":3},{"n":"Haggai","c":2},{"n":"Zechariah","c":14},{"n":"Malachi","c":4},{"n":"Matthew","c":28},{"n":"Mark","c":16},{"n":"Luke","c":24},{"n":"John","c":21},{"n":"Acts","c":28},{"n":"Romans","c":16},{"n":"1 Corinthians","c":16},{"n":"2 Corinthians","c":13},{"n":"Galatians","c":6},{"n":"Ephesians","c":6},{"n":"Philippians","c":4},{"n":"Colossians","c":4},{"n":"1 Thessalonians","c":5},{"n":"2 Thessalonians","c":3},{"n":"1 Timothy","c":6},{"n":"2 Timothy","c":4},{"n":"Titus","c":3},{"n":"Philemon","c":1},{"n":"Hebrews","c":13},{"n":"James","c":5},{"n":"1 Peter","c":5},{"n":"2 Peter","c":3},{"n":"1 John","c":5},{"n":"2 John","c":1},{"n":"3 John","c":1},{"n":"Jude","c":1},{"n":"Revelation","c":22}];
 
+// Helper: Map Book Name to Index for Sorting
+const BOOK_ORDER = {};
+BOOKS.forEach((b, i) => BOOK_ORDER[b.n] = i);
+
 // --- APP STATE ---
 const App = {
     init: () => {
@@ -56,7 +60,7 @@ const App = {
         // Stop Audio
         ReaderAudio.stop();
         
-        // Ensure we are on the Book Grid (not chapter list or search)
+        // Ensure we are on the Book Grid (Force Reset)
         Selector.reset(); 
     }
 };
@@ -158,8 +162,31 @@ const Selector = {
         }
         
         const cleanQ = query.toLowerCase().replace(/\\/g, "").replace(/\[/g, "").replace(/\]/g, "");
-        const results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
         
+        // Filter
+        let results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
+        
+        // SORT: Canonical Order (Gen -> Rev, then Chap, then Verse)
+        results.sort((a, b) => {
+            // "Genesis 1" -> "Genesis", "1"
+            const lastSpaceA = a.n.lastIndexOf(' ');
+            const bookA = a.n.substring(0, lastSpaceA);
+            const chapA = parseInt(a.n.substring(lastSpaceA + 1));
+            
+            const lastSpaceB = b.n.lastIndexOf(' ');
+            const bookB = b.n.substring(0, lastSpaceB);
+            const chapB = parseInt(b.n.substring(lastSpaceB + 1));
+            
+            // 1. Book Order
+            if (bookA !== bookB) {
+                return (BOOK_ORDER[bookA] || 99) - (BOOK_ORDER[bookB] || 99);
+            }
+            // 2. Chapter Order
+            if (chapA !== chapB) return chapA - chapB;
+            // 3. Verse Order
+            return parseInt(a.v) - parseInt(b.v);
+        });
+
         loader.classList.remove('visible');
         if(results.length === 0) {
             list.innerHTML = '<div style="text-align:center;margin-top:20px">No results found.</div>';
@@ -277,17 +304,15 @@ const Reader = {
             const m = c.match(/^###### (\d+)([\s\S]*)/);
             if(m) {
                 const vNum = m[1], vText = m[2].trim(), vId = `v-${vNum}`;
-                let wordsHtml = "";
                 
-                // --- ROBUST TOKENIZER ---
-                // Splits by Strongs codes to ensure they are attached to words
-                const parts = vText.split(/(\[\[[HG]\d+\]\])/);
+                // 1. Build Token List (Objects) not String
                 let tokens = [];
+                const parts = vText.split(/(\[\[[HG]\d+\]\])/);
 
                 parts.forEach(p => {
                     if (p.match(/^\[\[[HG]\d+\]\]$/)) {
                         const code = p.match(/[HG]\d+/)[0];
-                        // Attach code to the previous word token if it exists
+                        // Attach to previous word token
                         for (let i = tokens.length - 1; i >= 0; i--) {
                             if (tokens[i].type === 'word') {
                                 tokens[i].code = code;
@@ -295,22 +320,20 @@ const Reader = {
                             }
                         }
                     } else if (p.trim() !== "") {
-                        // Split text by spaces, preserving the spaces as tokens
+                        // Split text
                         const sub = p.split(/(\s+)/);
                         sub.forEach(s => {
                             if (!s) return;
-                            if (s.match(/^\s+$/)) {
-                                tokens.push({ type: 'space', text: s });
-                            } else {
-                                tokens.push({ type: 'word', text: s, code: null });
-                            }
+                            if (s.match(/^\s+$/)) tokens.push({ type: 'space', text: s });
+                            else tokens.push({ type: 'word', text: s });
                         });
                     } else if (p.match(/\s+/)) {
                         tokens.push({ type: 'space', text: p });
                     }
                 });
                 
-                // Render Tokens to HTML
+                // 2. Render Tokens to HTML
+                let wordsHtml = "";
                 let wIdx = 0;
                 tokens.forEach(t => {
                     if(t.type === 'space') {
@@ -318,6 +341,7 @@ const Reader = {
                     } else {
                         const wId = `${vId}-w-${wIdx}`;
                         const hl = Reader.highlightData[wId] || "";
+                        // If token has code, add lexicon class and data attribute
                         const lexClass = t.code ? "lexicon-word" : "";
                         const dataAttr = t.code ? `data-code="${t.code}"` : "";
                         
@@ -353,8 +377,10 @@ const Reader = {
         AppAPI.setGlobal("BibleHistory", JSON.stringify(h));
     },
 
+    // Interactions
     verseClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='word') Reader.clearSel(); Reader.selectedType='verse'; Reader.toggleSel(id); },
     wordClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='verse') Reader.clearSel(); Reader.selectedType='word'; Reader.toggleSel(id); },
+    
     toggleSel: (id) => {
         const el = document.getElementById(id);
         if(Reader.selectionIds.has(id)) { Reader.selectionIds.delete(id); el.classList.remove('ui-selected'); }
@@ -395,7 +421,6 @@ const Reader = {
         let code = null;
         Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code = el.dataset.code; });
         if(code) {
-            // Use escaped brackets so Regex logic in Search knows it's a code
             AppAPI.setGlobal("BibleAutoSearch", `\\[\\[${code}\\]\\]`);
             App.goHome(); 
         }
@@ -572,12 +597,10 @@ const ReaderAudio = {
         if (track !== ReaderAudio.currentTrack) {
             ReaderAudio.currentTrack = track;
             ReaderAudio.player.src = ReaderAudio.playlist[track];
-            ReaderAudio.player.play().then(() => {
-                ReaderAudio.player.currentTime = offset;
-            });
-        } else {
-            ReaderAudio.player.currentTime = offset;
+            ReaderAudio.player.play();
+            ReaderAudio.updateUI(true);
         }
+        ReaderAudio.player.currentTime = offset;
     },
     
     toggleSpeedPopup: () => document.getElementById('speedControlPopup').classList.toggle('visible'),
@@ -622,7 +645,7 @@ const ReaderScroll = {
     loop: () => {
         if(!ReaderScroll.active) return;
         let speed = parseInt(document.getElementById('scrollSpeedLabel').innerText) || 1;
-        if(ReaderAudio.isPlaying) speed = 0.25; // Slower when reading
+        if(!ReaderAudio.player.paused) speed = 0.5; 
         
         window.scrollBy(0, speed);
         if((window.innerHeight + window.pageYOffset) >= document.body.offsetHeight - 10) {
