@@ -34,7 +34,6 @@ const App = {
     navBack: () => {
         if (!document.getElementById('view-reader').classList.contains('hidden')) App.goHome();
         else if (!document.getElementById('view-plans-grid').classList.contains('hidden')) ReadingPlans.showDashboard();
-        else if (!document.getElementById('view-plans-preview').classList.contains('hidden')) ReadingPlans.showDashboard();
         else if (!document.getElementById('view-plans').classList.contains('hidden')) ReadingPlans.hideDashboard();
         else Selector.reset();
     },
@@ -42,7 +41,6 @@ const App = {
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
         document.getElementById('view-plans').classList.add('hidden');
-        document.getElementById('view-plans-preview').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnAudio').classList.add('hidden');
@@ -235,14 +233,12 @@ const Selector = {
         
         document.getElementById('view-selector').classList.remove('hidden');
         document.getElementById('view-plans').classList.add('hidden');
-        document.getElementById('view-plans-preview').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('bookGrid').classList.remove('hidden');
         document.querySelector('.search-wrapper').classList.remove('hidden');
         
         document.getElementById('chapterGrid').classList.add('hidden');
         document.getElementById('searchList').classList.add('hidden');
-        document.getElementById('historyList').classList.add('hidden');
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnHistory').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
@@ -706,9 +702,6 @@ const ReadingPlans = {
         document.getElementById('view-selector').classList.add('hidden');
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-plans').classList.remove('hidden');
-        document.getElementById('view-plans-day').classList.add('hidden');
-        document.getElementById('view-plans-preview').classList.add('hidden');
-        document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('headerLabel').innerText = "Reading Plans";
         document.getElementById('btnBack').classList.remove('hidden');
         document.getElementById('btnBack').onclick = ReadingPlans.hideDashboard;
@@ -751,7 +744,7 @@ const ReadingPlans = {
                 ` : `
                     <div class="plan-meta">${plan.totalDays} days • Tap to preview</div>
                     <div class="plan-actions">
-                        <button class="btn-fill" onclick="event.stopPropagation(); ReadingPlans.subscribe('${plan.id}'); ReadingPlans.showDashboard();">Subscribe</button>
+                        <button class="btn-fill" onclick="event.stopPropagation(); ReadingPlans.subscribe('${plan.id}'); ReadingPlans.showPlanGrid '${plan.id}');">Subscribe</button>
                         <button class="btn-text" onclick="ReadingPlans.showPreview('${plan.id}')">Preview</button>
                     </div>
                 `}
@@ -765,7 +758,6 @@ const ReadingPlans = {
     // UI: Hide Plans Dashboard
     hideDashboard: () => {
         document.getElementById('view-plans').classList.add('hidden');
-        document.getElementById('view-plans-preview').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
         document.getElementById('btnBack').classList.add('hidden');
@@ -773,49 +765,105 @@ const ReadingPlans = {
         document.getElementById('headerLabel').innerText = "The Bible";
     },
     
-    // UI: Show Plan Preview (before subscribing)
+    // UI: Show Plan Preview (before subscribing) - same as grid view
     showPreview: async (planId) => {
         const plan = ReadingPlans.loadedPlans[planId];
         if(!plan) return;
         
         const isSubscribed = ReadingPlans.isSubscribed(planId);
         
+        // If already subscribed, just open the grid
+        if(isSubscribed) {
+            ReadingPlans.showPlanGrid(planId);
+            return;
+        }
+        
+        ReadingPlans.expandedDays.clear();
+        
         document.getElementById('view-plans').classList.add('hidden');
-        document.getElementById('view-plans-preview').classList.remove('hidden');
-        document.getElementById('view-plans-grid').classList.add('hidden');
+        document.getElementById('view-plans-preview').classList.add('hidden');
+        document.getElementById('view-plans-grid').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = plan.name;
-        document.getElementById('btnBack').onclick = ReadingPlans.hideDashboard;
+        document.getElementById('btnBack').onclick = () => ReadingPlans.showDashboard();
         
-        // Plan info
-        document.getElementById('previewPlanName').innerText = plan.name;
-        document.getElementById('previewPlanDesc').innerText = plan.description;
-        document.getElementById('previewPlanMeta').innerText = `${plan.totalDays} days • ${plan.startMode === 'calendar' ? 'Starts ' + plan.startDate : 'Starts when you subscribe'}`;
+        // Render day grid (same as subscribed view)
+        const gridContainer = document.getElementById('planDayGrid');
+        gridContainer.innerHTML = '';
         
-        // Sample readings (first 5 days)
-        const sampleContainer = document.getElementById('previewSampleReadings');
-        sampleContainer.innerHTML = '';
-        const sampleDays = plan.readings.slice(0, 5);
-        sampleDays.forEach(reading => {
+        plan.readings.forEach(reading => {
             const dayCard = document.createElement('div');
-            dayCard.className = 'preview-day-card';
+            dayCard.className = 'day-grid-card preview-mode';
+            dayCard.id = `day-card-${planId}-${reading.day}`;
+            
             dayCard.innerHTML = `
-                <div class="preview-day-header">Day ${reading.day}</div>
-                <div class="preview-day-sections">
-                    ${reading.sections.map(s => `<span class="preview-section">${s.reference}</span>`).join('')}
+                <div class="day-grid-header" onclick="ReadingPlans.toggleDayExpandPreview('${planId}', ${reading.day})">
+                    <span class="day-grid-num">${reading.day}</span>
+                </div>
+                <div class="day-grid-refs">
+                    ${reading.sections.map(s => `<span class="day-ref-chip">${s.reference}</span>`).join('')}
                 </div>
             `;
-            sampleContainer.appendChild(dayCard);
+            
+            gridContainer.appendChild(dayCard);
         });
         
-        // Subscribe button
-        const subscribeBtn = document.getElementById('previewSubscribeBtn');
-        if(isSubscribed) {
-            subscribeBtn.innerText = "Open Plan";
-            subscribeBtn.onclick = () => ReadingPlans.showPlanGrid(planId);
+        // Add subscribe button at the bottom
+        const subscribeFooter = document.createElement('div');
+        subscribeFooter.className = 'preview-footer';
+        subscribeFooter.innerHTML = `
+            <div class="preview-footer-info">
+                <span class="material-icons-round">info</span>
+                <span>${plan.totalDays} days • Preview Mode</span>
+            </div>
+            <button class="btn-fill" onclick="ReadingPlans.subscribe('${planId}'); ReadingPlans.showPlanGrid('${planId}');">Subscribe to Plan</button>
+        `;
+        gridContainer.appendChild(subscribeFooter);
+    },
+    
+    // Toggle day expansion for preview mode (no completion tracking)
+    toggleDayExpandPreview: (planId, dayNum) => {
+        const card = document.getElementById(`day-card-${planId}-${dayNum}`);
+        if(!card) return;
+        
+        const isExpanded = ReadingPlans.expandedDays.has(dayNum);
+        
+        if(isExpanded) {
+            ReadingPlans.expandedDays.delete(dayNum);
+            card.classList.remove('expanded');
+            const expandedContent = card.querySelector('.day-expanded-content');
+            if(expandedContent) expandedContent.remove();
         } else {
-            subscribeBtn.innerText = "Subscribe";
-            subscribeBtn.onclick = () => { ReadingPlans.subscribe(planId); ReadingPlans.showPlanGrid(planId); };
+            ReadingPlans.expandedDays.add(dayNum);
+            card.classList.add('expanded');
+            const reading = ReadingPlans.getDayReading(planId, dayNum);
+            
+            const expandedDiv = document.createElement('div');
+            expandedDiv.className = 'day-expanded-content';
+            expandedDiv.innerHTML = `
+                ${reading.sections.map(s => `
+                    <div class="day-section-row">
+                        <span class="day-section-label">${s.label}</span>
+                        <span class="day-section-ref">${s.reference}</span>
+                        <button class="btn-icon-small" onclick="ReadingPlans.navigateToReading('${s.reference}')">
+                            <span class="material-icons-round">open_in_new</span>
+                        </button>
+                    </div>
+                `).join('')}
+            `;
+            card.appendChild(expandedDiv);
         }
+    },
+    
+    // Toggle day complete - used in the grid view to mark a day complete
+    toggleDayCompleteInternal: (planId, dayNum) => {
+        const isComplete = ReadingPlans.isComplete(planId, dayNum);
+        if(isComplete) {
+            ReadingPlans.unmarkComplete(planId, dayNum);
+        } else {
+            ReadingPlans.markComplete(planId, dayNum);
+        }
+        // Refresh the grid
+        ReadingPlans.showPlanGrid(planId);
     },
     
     // UI: Show Plan Grid (compact view of all days)
