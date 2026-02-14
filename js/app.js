@@ -4,10 +4,11 @@
 
 const BOOKS = [{"n":"Genesis","c":50},{"n":"Exodus","c":40},{"n":"Leviticus","c":27},{"n":"Numbers","c":36},{"n":"Deuteronomy","c":34},{"n":"Joshua","c":24},{"n":"Judges","c":21},{"n":"Ruth","c":4},{"n":"1 Samuel","c":31},{"n":"2 Samuel","c":24},{"n":"1 Kings","c":22},{"n":"2 Kings","c":25},{"n":"1 Chronicles","c":29},{"n":"2 Chronicles","c":36},{"n":"Ezra","c":10},{"n":"Nehemiah","c":13},{"n":"Esther","c":10},{"n":"Job","c":42},{"n":"Psalms","c":150},{"n":"Proverbs","c":31},{"n":"Ecclesiastes","c":12},{"n":"Song of Solomon","c":8},{"n":"Isaiah","c":66},{"n":"Jeremiah","c":52},{"n":"Lamentations","c":5},{"n":"Ezekiel","c":48},{"n":"Daniel","c":12},{"n":"Hosea","c":14},{"n":"Joel","c":3},{"n":"Amos","c":9},{"n":"Obadiah","c":1},{"n":"Jonah","c":4},{"n":"Micah","c":7},{"n":"Nahum","c":3},{"n":"Habakkuk","c":3},{"n":"Zephaniah","c":3},{"n":"Haggai","c":2},{"n":"Zechariah","c":14},{"n":"Malachi","c":4},{"n":"Matthew","c":28},{"n":"Mark","c":16},{"n":"Luke","c":24},{"n":"John","c":21},{"n":"Acts","c":28},{"n":"Romans","c":16},{"n":"1 Corinthians","c":16},{"n":"2 Corinthians","c":13},{"n":"Galatians","c":6},{"n":"Ephesians","c":6},{"n":"Philippians","c":4},{"n":"Colossians","c":4},{"n":"1 Thessalonians","c":5},{"n":"2 Thessalonians","c":3},{"n":"1 Timothy","c":6},{"n":"2 Timothy","c":4},{"n":"Titus","c":3},{"n":"Philemon","c":1},{"n":"Hebrews","c":13},{"n":"James","c":5},{"n":"1 Peter","c":5},{"n":"2 Peter","c":3},{"n":"1 John","c":5},{"n":"2 John","c":1},{"n":"3 John","c":1},{"n":"Jude","c":1},{"n":"Revelation","c":22}];
 
-// Helper for Book Sorting
+// Helper: Map Book Name to Index for Sorting
 const BOOK_ORDER = {};
 BOOKS.forEach((b, i) => BOOK_ORDER[b.n] = i);
 
+// --- APP STATE ---
 const App = {
     init: () => {
         const theme = AppAPI.getGlobal("BibleThemeMode");
@@ -44,6 +45,8 @@ const App = {
         document.querySelector('.search-wrapper').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
         ReaderAudio.stop();
+        
+        // Ensure we are on the Book Grid (Force Reset)
         Selector.reset(); 
     }
 };
@@ -144,20 +147,29 @@ const Selector = {
             }
         }
         
-        const cleanQ = query.toLowerCase().replace(/[\[\]]/g, "");
-        const results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
+        const cleanQ = query.toLowerCase().replace(/\\/g, "").replace(/\[/g, "").replace(/\]/g, "");
         
-        // Canonical Sort
+        // Filter
+        let results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
+        
+        // SORT: Canonical Order (Gen -> Rev, then Chap, then Verse)
         results.sort((a, b) => {
-            const getParts = (str) => {
-                const ls = str.lastIndexOf(' ');
-                return [str.substring(0, ls), parseInt(str.substring(ls+1))];
-            };
-            const [bA, cA] = getParts(a.n);
-            const [bB, cB] = getParts(b.n);
+            // "Genesis 1" -> "Genesis", "1"
+            const lastSpaceA = a.n.lastIndexOf(' ');
+            const bookA = a.n.substring(0, lastSpaceA);
+            const chapA = parseInt(a.n.substring(lastSpaceA + 1));
             
-            if (bA !== bB) return (BOOK_ORDER[bA] || 99) - (BOOK_ORDER[bB] || 99);
-            if (cA !== cB) return cA - cB;
+            const lastSpaceB = b.n.lastIndexOf(' ');
+            const bookB = b.n.substring(0, lastSpaceB);
+            const chapB = parseInt(b.n.substring(lastSpaceB + 1));
+            
+            // 1. Book Order
+            if (bookA !== bookB) {
+                return (BOOK_ORDER[bookA] || 99) - (BOOK_ORDER[bookB] || 99);
+            }
+            // 2. Chapter Order
+            if (chapA !== chapB) return chapA - chapB;
+            // 3. Verse Order
             return parseInt(a.v) - parseInt(b.v);
         });
 
@@ -277,32 +289,38 @@ const Reader = {
             const m = c.match(/^###### (\d+)([\s\S]*)/);
             if(m) {
                 const vNum = m[1], vText = m[2].trim(), vId = `v-${vNum}`;
-                let wordsHtml = "";
                 
-                // Two-Pass Tokenizer for Lexicon
-                const parts = vText.split(/(\[\[[HG]\d+\]\])/);
+                // 1. Build Token List (Objects) not String
                 let tokens = [];
-                
+                const parts = vText.split(/(\[\[[HG]\d+\]\])/);
+
                 parts.forEach(p => {
                     if (p.match(/^\[\[[HG]\d+\]\]$/)) {
                         const code = p.match(/[HG]\d+/)[0];
+                        // Attach to previous word token
                         for (let i = tokens.length - 1; i >= 0; i--) {
                             if (tokens[i].type === 'word') { tokens[i].code = code; break; }
                         }
                     } else if (p.trim() !== "") {
-                        p.split(/(\s+)/).forEach(s => {
+                        // Split text
+                        const sub = p.split(/(\s+)/);
+                        sub.forEach(s => {
                             if (!s) return;
-                            s.match(/^\s+$/) ? tokens.push({ type: 'space', text: s }) : tokens.push({ type: 'word', text: s });
+                            if (s.match(/^\s+$/)) tokens.push({ type: 'space', text: s });
+                            else tokens.push({ type: 'word', text: s });
                         });
                     } else if (p.match(/\s+/)) tokens.push({ type: 'space', text: p });
                 });
                 
+                // 2. Render Tokens to HTML
+                let wordsHtml = "";
                 let wIdx = 0;
                 tokens.forEach(t => {
                     if(t.type === 'space') wordsHtml += t.text;
                     else {
                         const wId = `${vId}-w-${wIdx}`;
                         const hl = Reader.highlightData[wId] || "";
+                        // If token has code, add lexicon class and data attribute
                         const lexClass = t.code ? "lexicon-word" : "";
                         const dataAttr = t.code ? `data-code="${t.code}"` : "";
                         wordsHtml += `<span id="${wId}" class="w ${hl} ${lexClass}" ${dataAttr} onclick="Reader.wordClick(event, '${wId}')">${t.text}</span>`;
@@ -335,8 +353,10 @@ const Reader = {
         AppAPI.setGlobal("BibleHistory", JSON.stringify(h));
     },
 
+    // Interactions
     verseClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='word') Reader.clearSel(); Reader.selectedType='verse'; Reader.toggleSel(id); },
     wordClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='verse') Reader.clearSel(); Reader.selectedType='word'; Reader.toggleSel(id); },
+    
     toggleSel: (id) => {
         const el = document.getElementById(id);
         if(Reader.selectionIds.has(id)) { Reader.selectionIds.delete(id); el.classList.remove('ui-selected'); }
@@ -370,7 +390,7 @@ const Reader = {
         let code = null;
         Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code = el.dataset.code; });
         if(code) {
-            AppAPI.setGlobal("BibleAutoSearch", `[[${code}]]`); // Wrap brackets
+            AppAPI.setGlobal("BibleAutoSearch", `\\[\\[${code}\\]\\]`);
             App.goHome(); 
         }
     },
@@ -502,8 +522,16 @@ const ReaderAudio = {
     handleScrub: (val) => {
         const target = (val / 100) * ReaderAudio.totalDuration;
         let ts = 0, track = 0, offset = 0;
-        for(let i=0; i<ReaderAudio.partDurations.length; i++) { if (target < (ts + ReaderAudio.partDurations[i])) { track = i; offset = target - ts; break; } ts += ReaderAudio.partDurations[i]; }
-        if (track !== ReaderAudio.currentTrack) { ReaderAudio.currentTrack = track; ReaderAudio.player.src = ReaderAudio.playlist[track]; ReaderAudio.player.play(); ReaderAudio.updateUI(true); }
+        for(let i=0; i<ReaderAudio.partDurations.length; i++) {
+            if (target < (ts + ReaderAudio.partDurations[i])) { track = i; offset = target - ts; break; }
+            ts += ReaderAudio.partDurations[i];
+        }
+        if (track !== ReaderAudio.currentTrack) {
+            ReaderAudio.currentTrack = track;
+            ReaderAudio.player.src = ReaderAudio.playlist[track];
+            ReaderAudio.player.play();
+            ReaderAudio.updateUI(true);
+        }
         ReaderAudio.player.currentTime = offset;
     },
     toggleSpeedPopup: () => document.getElementById('speedControlPopup').classList.toggle('visible'),
@@ -526,7 +554,8 @@ const ReaderScroll = {
     loop: () => {
         if(!ReaderScroll.active) return;
         let speed = parseInt(document.getElementById('scrollSpeedLabel').innerText) || 1;
-        if(ReaderAudio.isPlaying) speed = 0.25; 
+        if(!ReaderAudio.player.paused) speed = 0.5; 
+        
         window.scrollBy(0, speed);
         if((window.innerHeight + window.pageYOffset) >= document.body.offsetHeight - 10) {
             if(AppAPI.getGlobal("BibleAutoPlay") === 'true') Reader.navNext(); else ReaderScroll.toggle(); return;
