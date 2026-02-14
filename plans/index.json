@@ -1,0 +1,27 @@
+[
+  {
+    "id": "bible-in-a-year",
+    "name": "Bible in a Year",
+    "description": "Read the entire Bible in 365 days with daily Old and New Testament readings.",
+    "totalDays": 365,
+    "startMode": "subscription",
+    "icon": "menu_book"
+  },
+  {
+    "id": "new-testament-90",
+    "name": "New Testament in 90 Days",
+    "description": "Journey through the New Testament in three months.",
+    "totalDays": 90,
+    "startMode": "subscription",
+    "icon": "auto_stories"
+  },
+  {
+    "id": "chronological-annual",
+    "name": "Chronological Reading Plan",
+    "description": "Read the Bible in historical order. Starts January 1st each year.",
+    "totalDays": 365,
+    "startMode": "calendar",
+    "startDate": "01-01",
+    "icon": "schedule"
+  }
+]

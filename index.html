@@ -22,6 +22,7 @@
     </div>
     <div style="display:flex; align-items:center" id="headerActions">
         <!-- Selector Actions -->
+        <button class="icon-btn" id="btnPlans" onclick="ReadingPlans.showDashboard()"><span class="material-icons-round">calendar_month</span></button>
         <button class="icon-btn" id="btnHistory" onclick="Selector.toggleHistory()"><span class="material-icons-round">history</span></button>
         <!-- Reader Actions -->
         <button class="nav-btn hidden" id="btnStop" onclick="ReaderAudio.stop()" style="color:var(--primary-color)"><span class="material-icons-round">stop_circle</span></button>
@@ -58,6 +59,26 @@
     <section id="view-reader" class="hidden">
         <div id="contentArea"></div>
         <div id="readerLoading" class="loading hidden"><span class="material-icons-round spin">sync</span><br><span>Loading...</span></div>
+    </section>
+
+    <!-- VIEW 3: READING PLANS DASHBOARD -->
+    <section id="view-plans" class="hidden">
+        <div id="plansLoader" class="loading"><span class="material-icons-round spin">sync</span><br><span>Loading plans...</span></div>
+        <div id="plansList" class="plans-list"></div>
+    </section>
+
+    <!-- VIEW 4: READING PLANS DAY VIEW -->
+    <section id="view-plans-day" class="hidden">
+        <div class="day-nav">
+            <button class="nav-btn" id="btnPrevDay"><span class="material-icons-round">chevron_left</span></button>
+            <button class="nav-btn" id="btnNextDay"><span class="material-icons-round">chevron_right</span></button>
+        </div>
+        <div id="dayReadingsList" class="day-readings-list"></div>
+        <div class="day-actions">
+            <button class="btn-fill btn-complete" id="btnMarkComplete">
+                <span class="material-icons-round">radio_button_unchecked</span> Mark Complete
+            </button>
+        </div>
     </section>
 </main>
 

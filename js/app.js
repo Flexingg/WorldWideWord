@@ -2,7 +2,7 @@
  * WordWideWeb - Pure Web Logic
  */
 
-const BOOKS = [{"n":"Genesis","c":50},{"n":"Exodus","c":40},{"n":"Leviticus","c":27},{"n":"Numbers","c":36},{"n":"Deuteronomy","c":34},{"n":"Joshua","c":24},{"n":"Judges","c":21},{"n":"Ruth","c":4},{"n":"1 Samuel","c":31},{"n":"2 Samuel","c":24},{"n":"1 Kings","c":22},{"n":"2 Kings","c":25},{"n":"1 Chronicles","c":29},{"n":"2 Chronicles","c":36},{"n":"Ezra","c":10},{"n":"Nehemiah","c":13},{"n":"Esther","c":10},{"n":"Job","c":42},{"n":"Psalms","c":150},{"n":"Proverbs","c":31},{"n":"Ecclesiastes","c":12},{"n":"Song of Solomon","c":8},{"n":"Isaiah","c":66},{"n":"Jeremiah","c":52},{"n":"Lamentations","c":5},{"n":"Ezekiel","c":48},{"n":"Daniel","c":12},{"n":"Hosea","c":14},{"n":"Joel","c":3},{"n":"Amos","c":9},{"n":"Obadiah","c":1},{"n":"Jonah","c":4},{"n":"Micah","c":7},{"n":"Nahum","c":3},{"n":"Habakkuk","c":3},{"n":"Zephaniah","c":3},{"n":"Haggai","c":2},{"n":"Zechariah","c":14},{"n":"Malachi","c":4},{"n":"Matthew","c":28},{"n":"Mark","c":16},{"n":"Luke","c":24},{"n":"John","c":21},{"n":"Acts","c":28},{"n":"Romans","c":16},{"n":"1 Corinthians","c":16},{"n":"2 Corinthians","c":13},{"n":"Galatians","c":6},{"n":"Ephesians","c":6},{"n":"Philippians","c":4},{"n":"Colossians","c":4},{"n":"1 Thessalonians","c":5},{"n":"2 Thessalonians","c":3},{"n":"1 Timothy","c":6},{"n":"2 Timothy","c":4},{"n":"Titus","c":3},{"n":"Philemon","c":1},{"n":"Hebrews","c":13},{"n":"James","c":5},{"n":"1 Peter","c":5},{"n":"2 Peter","c":3},{"n":"1 John","c":5},{"n":"2 John","c":1},{"n":"3 John","c":1},{"n":"Jude","c":1},{"n":"Revelation","c":22}];
+const BOOKS = [{"n":"Genesis","c":50},{"n":"Exodus","c":40},{"n":"Leviticus","c":27},{"n":"Numbers","c":36},{"n":"Deuteronomy","c":34},{"n":"Joshua","c":24},{"n":"Judges","c":21},{"n":"Ruth","c":4},{"n":"1 Samuel","c":31},{"n":"2 Samuel","c":24},{"n":"1 Kings","c":22},{"n":"2 Kings","c":25},{"n":"1 Chronicles","c":29},{"n":"2 Chronicles","c":36},{"n":"Ezra","c":10},{"n":"Nehemiah","c":13},{"n":"Esther","c":10},{"n":"Job","c":42},{"n":"Psalms","c":150},{"n":"Proverbs","c":31},{"n":"Ecclesiastes","c":12},{"n":"Song of Solomon","c":8},{"n":"Isaiah","c":66},{"n":"Jeremiah","c":52},{"n":"Lamentations","c":5},{"n":"Ezekiel","c":48},{"n":"Daniel","c":12},{"n":"Hosea","c":14},{"n":"Joel","c":3},{"n":"Amos","c":9},{"n":"Obadiah","c":1},{"n":"Jonah","c":4},{"n":"Micah","c":7},{"n":"Nahum","c":3},{"n":"Habakkuk","c":3},{"n":"Zephaniah","c":3},{"n":"Haggai","c":2},{"n":"Zechariah","c":14},{"n":"Malachi","c":4},{"n":"Matthew","c":28},{"n":"Mark","c":16},{"n":"Luke","c":24},{"n":"John","c":21},{"n":"Acts","c":28},{"n":"Romans","c":16},{"n":"1 Corinthians","c":16},{"n":"2 Corinthians","c":13},{"n":"Galatians","c":6},{"n":"Ephesians","c":6},{"n":"Philippians","c":4},{"n":"Colossians","c":4},{"n":"1 Thessalonians","c":5},{"n":"2 Thessalonians","c":3},{"n":"1 Timothy","c":6},{"n":"2 Timothy","c":4},{"n":"Titus","c":3},{"n":"Philemon","c":1},{"n":"Hebrews","c":13},{"n":"James","c":5},{"n":"1 Peter","c":5},{"n":"2 Peter","c":3},{"n":"1 John","c":5},{"n":"2 John","c":1},{"n":"3 John","c":1},{"n":"Jude","c":1},{"n":"Revelation","c":22 }];
 
 // Helper: Map Book Name to Index for Sorting
 const BOOK_ORDER = {};
@@ -14,6 +14,7 @@ const App = {
         const theme = AppAPI.getGlobal("BibleThemeMode");
         if(theme) App.applyTheme(theme);
         Selector.init();
+        ReadingPlans.init();
         
         const autoS = AppAPI.getGlobal("BibleAutoSearch");
         if(autoS) {
@@ -32,11 +33,15 @@ const App = {
     },
     navBack: () => {
         if (!document.getElementById('view-reader').classList.contains('hidden')) App.goHome();
+        else if (!document.getElementById('view-plans-day').classList.contains('hidden')) ReadingPlans.showDashboard();
+        else if (!document.getElementById('view-plans').classList.contains('hidden')) ReadingPlans.hideDashboard();
         else Selector.reset();
     },
     goHome: () => {
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
+        document.getElementById('view-plans').classList.add('hidden');
+        document.getElementById('view-plans-day').classList.add('hidden');
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnAudio').classList.add('hidden');
         document.getElementById('btnNextChap').classList.add('hidden');
@@ -227,6 +232,8 @@ const Selector = {
         document.getElementById('searchIcon').innerText = "filter_list";
         
         document.getElementById('view-selector').classList.remove('hidden');
+        document.getElementById('view-plans').classList.add('hidden');
+        document.getElementById('view-plans-day').classList.add('hidden');
         document.getElementById('bookGrid').classList.remove('hidden');
         document.querySelector('.search-wrapper').classList.remove('hidden');
         
@@ -390,7 +397,7 @@ const Reader = {
         let code = null;
         Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code = el.dataset.code; });
         if(code) {
-            AppAPI.setGlobal("BibleAutoSearch", `\\[\\[${code}\\]\\]`);
+            AppAPI.setGlobal("BibleAutoSearch", `[\\[${code}\\]]`);
             App.goHome(); 
         }
     },
@@ -540,6 +547,280 @@ const ReaderAudio = {
     toggleAutoPlay: () => { const n = !(AppAPI.getGlobal("BibleAutoPlay") === 'true'); AppAPI.setGlobal("BibleAutoPlay", n ? 'true' : 'false'); document.getElementById('btnAutoPlay').classList.toggle('active', n); },
     fmtTime: (s) => { if(isNaN(s)) return "0:00"; const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; },
     get isPlaying() { return !ReaderAudio.player.paused; }
+};
+
+const ReadingPlans = {
+    availablePlans: [],
+    loadedPlans: {},
+    subscribedPlans: [],
+    currentViewDay: {},
+    
+    // Initialize - load subscribed plans from localStorage
+    init: () => {
+        const raw = AppAPI.getGlobal("ReadingPlansSubscribed");
+        if(raw) {
+            try { ReadingPlans.subscribedPlans = JSON.parse(raw); }
+            catch(e) { ReadingPlans.subscribedPlans = []; }
+        }
+    },
+    
+    // Load available plans index
+    loadPlansIndex: async () => {
+        try {
+            const res = await fetch('plans/index.json');
+            if(!res.ok) throw new Error();
+            ReadingPlans.availablePlans = await res.json();
+            return ReadingPlans.availablePlans;
+        } catch(e) {
+            console.error('Failed to load plans index', e);
+            return [];
+        }
+    },
+    
+    // Load specific plan data
+    loadPlan: async (planId) => {
+        if(ReadingPlans.loadedPlans[planId]) return ReadingPlans.loadedPlans[planId];
+        try {
+            const res = await fetch(`plans/${planId}.json`);
+            if(!res.ok) throw new Error();
+            const plan = await res.json();
+            ReadingPlans.loadedPlans[planId] = plan;
+            return plan;
+        } catch(e) {
+            console.error('Failed to load plan:', planId, e);
+            return null;
+        }
+    },
+    
+    // Subscribe to a plan
+    subscribe: (planId) => {
+        if(ReadingPlans.subscribedPlans.find(p => p.planId === planId)) return;
+        const today = new Date().toISOString().split('T')[0];
+        ReadingPlans.subscribedPlans.push({
+            planId: planId,
+            startDate: today,
+            completedDays: [],
+            lastViewedDay: 1
+        });
+        ReadingPlans.saveSubscriptions();
+    },
+    
+    // Unsubscribe from a plan
+    unsubscribe: (planId) => {
+        ReadingPlans.subscribedPlans = ReadingPlans.subscribedPlans.filter(p => p.planId !== planId);
+        ReadingPlans.saveSubscriptions();
+    },
+    
+    // Save subscriptions to localStorage
+    saveSubscriptions: () => {
+        AppAPI.setGlobal("ReadingPlansSubscribed", JSON.stringify(ReadingPlans.subscribedPlans));
+    },
+    
+    // Check if subscribed to a plan
+    isSubscribed: (planId) => {
+        return !!ReadingPlans.subscribedPlans.find(p => p.planId === planId);
+    },
+    
+    // Get progress for a plan
+    getPlanProgress: (planId) => {
+        return ReadingPlans.subscribedPlans.find(p => p.planId === planId);
+    },
+    
+    // Calculate current day for a plan
+    getCurrentDay: (planId, planData) => {
+        const progress = ReadingPlans.getPlanProgress(planId);
+        if(!progress) return 1;
+        
+        // Calendar-based plan
+        if(planData.startMode === 'calendar' && planData.startDate) {
+            const today = new Date();
+            const [month, day] = planData.startDate.split('-').map(Number);
+            let startDate = new Date(today.getFullYear(), month - 1, day);
+            if(startDate > today) startDate = new Date(today.getFullYear() - 1, month - 1, day);
+            const diffDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            return Math.max(1, Math.min(diffDays, planData.totalDays));
+        }
+        
+        // Subscription-based plan
+        const startDate = new Date(progress.startDate);
+        const today = new Date();
+        const diffDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        return Math.max(1, Math.min(diffDays, planData.totalDays));
+    },
+    
+    // Get reading for a specific day
+    getDayReading: (planId, dayNum) => {
+        const plan = ReadingPlans.loadedPlans[planId];
+        if(!plan) return null;
+        return plan.readings.find(r => r.day === dayNum);
+    },
+    
+    // Mark a day as complete
+    markComplete: (planId, dayNum) => {
+        const progress = ReadingPlans.getPlanProgress(planId);
+        if(!progress) return;
+        if(!progress.completedDays.includes(dayNum)) {
+            progress.completedDays.push(dayNum);
+            ReadingPlans.saveSubscriptions();
+        }
+    },
+    
+    // Check if a day is complete
+    isComplete: (planId, dayNum) => {
+        const progress = ReadingPlans.getPlanProgress(planId);
+        return progress && progress.completedDays.includes(dayNum);
+    },
+    
+    // Calculate completion percentage
+    getCompletionPercentage: (planId, totalDays) => {
+        const progress = ReadingPlans.getPlanProgress(planId);
+        if(!progress) return 0;
+        return Math.round((progress.completedDays.length / totalDays) * 100);
+    },
+    
+    // Navigate to a reading reference
+    navigateToReading: (reference) => {
+        // Parse reference like "Genesis 5" or "1 John 3"
+        const match = reference.match(/^(.+?)\s+(\d+)$/);
+        if(!match) return;
+        const book = match[1];
+        const chapter = match[2];
+        const name = `${book} ${chapter}`;
+        const path = `bibles/BSB/BER-${book}/${name}.md`;
+        Reader.load(path, name);
+    },
+    
+    // UI: Show Plans Dashboard
+    showDashboard: async () => {
+        document.getElementById('view-selector').classList.add('hidden');
+        document.getElementById('view-reader').classList.add('hidden');
+        document.getElementById('view-plans').classList.remove('hidden');
+        document.getElementById('headerLabel').innerText = "Reading Plans";
+        document.getElementById('btnBack').classList.remove('hidden');
+        document.getElementById('btnBack').onclick = ReadingPlans.hideDashboard;
+        document.getElementById('btnHistory').classList.add('hidden');
+        
+        const loader = document.getElementById('plansLoader');
+        const list = document.getElementById('plansList');
+        loader.classList.remove('hidden');
+        list.innerHTML = '';
+        
+        await ReadingPlans.loadPlansIndex();
+        
+        for(const planMeta of ReadingPlans.availablePlans) {
+            const plan = await ReadingPlans.loadPlan(planMeta.id);
+            if(!plan) continue;
+            
+            const isSubscribed = ReadingPlans.isSubscribed(plan.id);
+            const progress = ReadingPlans.getPlanProgress(plan.id);
+            const pct = ReadingPlans.getCompletionPercentage(plan.id, plan.totalDays);
+            const currentDay = ReadingPlans.getCurrentDay(plan.id, plan);
+            
+            const card = document.createElement('div');
+            card.className = 'plan-card' + (isSubscribed ? ' subscribed' : '');
+            card.innerHTML = `
+                <div class="plan-header">
+                    <span class="material-icons-round plan-icon">${plan.icon || 'menu_book'}</span>
+                    <div class="plan-info">
+                        <div class="plan-name">${plan.name}</div>
+                        <div class="plan-desc">${plan.description}</div>
+                    </div>
+                </div>
+                ${isSubscribed ? `
+                    <div class="plan-progress">
+                        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+                        <div class="progress-text">Day ${currentDay} of ${plan.totalDays} • ${pct}% complete</div>
+                    </div>
+                    <div class="plan-actions">
+                        <button class="btn-fill" onclick="ReadingPlans.showDayView('${plan.id}', ${currentDay})">Today's Reading</button>
+                        <button class="btn-text" onclick="ReadingPlans.unsubscribe('${plan.id}'); ReadingPlans.showDashboard();">Unsubscribe</button>
+                    </div>
+                ` : `
+                    <div class="plan-meta">${plan.totalDays} days</div>
+                    <div class="plan-actions">
+                        <button class="btn-fill" onclick="ReadingPlans.subscribe('${plan.id}'); ReadingPlans.showDashboard();">Subscribe</button>
+                    </div>
+                `}
+            `;
+            list.appendChild(card);
+        }
+        
+        loader.classList.add('hidden');
+    },
+    
+    // UI: Hide Plans Dashboard
+    hideDashboard: () => {
+        document.getElementById('view-plans').classList.add('hidden');
+        document.getElementById('view-plans-day').classList.add('hidden');
+        document.getElementById('view-selector').classList.remove('hidden');
+        document.getElementById('btnBack').classList.add('hidden');
+        document.getElementById('btnHistory').classList.remove('hidden');
+        document.getElementById('headerLabel').innerText = "The Bible";
+    },
+    
+    // UI: Show Day View
+    showDayView: async (planId, dayNum) => {
+        const plan = ReadingPlans.loadedPlans[planId];
+        if(!plan) return;
+        
+        const progress = ReadingPlans.getPlanProgress(planId);
+        if(progress) progress.lastViewedDay = dayNum;
+        ReadingPlans.currentViewDay[planId] = dayNum;
+        ReadingPlans.saveSubscriptions();
+        
+        document.getElementById('view-plans').classList.add('hidden');
+        document.getElementById('view-plans-day').classList.remove('hidden');
+        document.getElementById('headerLabel').innerText = `${plan.name} • Day ${dayNum}`;
+        document.getElementById('btnBack').onclick = () => ReadingPlans.showDashboard();
+        
+        const reading = ReadingPlans.getDayReading(planId, dayNum);
+        const isComplete = ReadingPlans.isComplete(planId, dayNum);
+        
+        const container = document.getElementById('dayReadingsList');
+        container.innerHTML = '';
+        
+        if(!reading) {
+            container.innerHTML = '<div style="text-align:center;opacity:0.5;margin-top:20px">No reading for this day</div>';
+            return;
+        }
+        
+        reading.sections.forEach(section => {
+            const card = document.createElement('div');
+            card.className = 'reading-section-card';
+            card.innerHTML = `
+                <div class="section-label">${section.label}</div>
+                <div class="section-reference">${section.reference}</div>
+                <button class="btn-fill" onclick="ReadingPlans.navigateToReading('${section.reference}')">Read</button>
+            `;
+            container.appendChild(card);
+        });
+        
+        // Mark complete button
+        const completeBtn = document.getElementById('btnMarkComplete');
+        if(isComplete) {
+            completeBtn.classList.add('completed');
+            completeBtn.innerHTML = '<span class="material-icons-round">check_circle</span> Completed';
+        } else {
+            completeBtn.classList.remove('completed');
+            completeBtn.innerHTML = '<span class="material-icons-round">radio_button_unchecked</span> Mark Complete';
+        }
+        completeBtn.onclick = () => {
+            ReadingPlans.markComplete(planId, dayNum);
+            ReadingPlans.showDayView(planId, dayNum);
+        };
+        
+        // Navigation buttons
+        document.getElementById('btnPrevDay').classList.toggle('hidden', dayNum <= 1);
+        document.getElementById('btnNextDay').classList.toggle('hidden', dayNum >= plan.totalDays);
+        document.getElementById('btnPrevDay').onclick = () => ReadingPlans.showDayView(planId, dayNum - 1);
+        document.getElementById('btnNextDay').onclick = () => ReadingPlans.showDayView(planId, dayNum + 1);
+    },
+    
+    // UI: Hide Day View
+    hideDayView: () => {
+        document.getElementById('view-plans-day').classList.add('hidden');
+        document.getElementById('view-plans').classList.remove('hidden');
+    }
 };
 
 const ReaderScroll = {
