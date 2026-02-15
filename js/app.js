@@ -138,10 +138,7 @@ const App = {
     },
     applyTheme: (t) => {
         document.documentElement.setAttribute('data-theme', t);
-        // Update theme icon based on theme type
-        const icon = document.getElementById('themeIcon');
-        const isDark = ['dark', 'oled'].includes(t);
-        icon.innerText = isDark ? "light_mode" : "dark_mode";
+        // Theme icon removed from header - theme is now changed via Settings modal
     },
     toggleTheme: () => {
         // Open settings modal instead of cycling
@@ -296,10 +293,7 @@ const Settings = {
             el.classList.toggle('active', el.dataset.themeOption === theme);
         });
         
-        // Update theme icon
-        const icon = document.getElementById('themeIcon');
-        const isDark = ['dark', 'oled'].includes(theme);
-        icon.innerText = isDark ? "light_mode" : "dark_mode";
+        // Theme icon removed from header - theme is changed via Settings modal
     },
     
     // Accent Color
