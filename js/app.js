@@ -615,6 +615,7 @@ const Selector = {
         document.getElementById('searchIcon').innerText = "filter_list";
         
         document.getElementById('view-selector').classList.remove('hidden');
+        document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-plans').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('bookGrid').classList.remove('hidden');
@@ -779,6 +780,7 @@ const Reader = {
         Reader.selectionIds.clear();
         document.getElementById('selectionIsland').classList.remove('visible');
     },
+    clearSelection: function() { Reader.clearSel(); },
     applyColor: (c) => {
         Reader.selectionIds.forEach(id => {
             const el = document.getElementById(id);
