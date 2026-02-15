@@ -26,7 +26,7 @@ It treats a standard file system (Markdown text and MP3 audio) as a database, fe
 - **Preview Mode:** Preview any plan before subscribing.
 
 ### 🎧 Virtual Audio Timeline
-- **Seamless Playback:** Stitches multiple audio files (verses/parts) into a continuous "Virtual Timeline."
+- **Seamless Playback:** Stitches multiple audio files (verses/parts) into a continuous "Virtual Timeline".
 - **Smart Scrubber:** A custom waveform scrubber that represents the entire chapter's duration, even if the audio is split into multiple physical files.
 - **Background Playback:** Audio continues playing while you browse the library.
 
@@ -67,42 +67,21 @@ When reading a chapter, tap the **share icon** (share) in the header to:
 - Use browser **back/forward** buttons to navigate through your reading history
 - The URL updates automatically as you browse books, chapters, and plans
 
-### 🎨 Font & Theme Customization
+### 🎨 Theme Customization
 
-WordWideWeb offers extensive customization options for a personalized reading experience. Access settings by tapping the **gear icon** (⚙️) in the header.
-
-#### Font Settings
-
-| Setting | Options | Default |
-|---------|---------|---------|
-| Font Family | Serif, Sans-serif | Serif |
-| Font Size | 14px - 28px | 19px |
-| Line Height | 1.4 - 2.2 | 1.7 |
+WordWideWeb offers a simple theme system with customizable accent colors. Access settings by tapping the **gear icon** (⚙️) in the header.
 
 #### Theme Options
 
 | Theme | Description |
 |-------|-------------|
-| **Light** | Clean, bright interface with blue accents |
+| **Light** | Clean, bright interface |
 | **Dark** | Dark gray background with light text, reduces eye strain |
-| **OLED Black** | Pure black background, ideal for AMOLED screens |
-| **Sepia** | Warm, paper-like tones for comfortable reading |
-| **Retro** | Vintage aesthetic with orange accents |
-| **You (Light)** | Material You dynamic colors in light mode |
-| **You (Dark)** | Material You dynamic colors in dark mode |
+| **AMOLED** | Pure black background, ideal for AMOLED screens |
 
-#### Material You Themes
+#### Accent Color
 
-The Material You themes use HCT (Hue, Chroma, Tone) color science to generate a complete color palette from a single seed color, following [Material Design 3 guidelines](https://m3.material.io/styles/color/system/overview):
-
-1. **Choose a seed color** using the color picker or select from 8 presets
-2. **Automatic palette generation** creates accessible color roles:
-   - **Primary** - For buttons, links, highlights
-   - **On Primary** - Text/icons on primary colors
-   - **Primary Container** - For containers and cards
-   - **On Primary Container** - Text/icons in containers
-3. **Light and Dark variants** - Both themes use the same seed color but generate appropriate tones for their mode
-4. **Accessible contrast** - Colors automatically meet WCAG contrast requirements
+Choose from 8 preset accent colors or use the color picker to select any custom color. The accent color automatically generates appropriate primary, container, and contrast colors for the selected theme.
 
 All settings are automatically saved to your browser's localStorage and persist across sessions.
 
@@ -174,10 +153,9 @@ We are actively developing new features. Here is the priority list:
   - Mobile share functionality with Web Share API
   - Direct links to books, plans, and search queries
 
-- **Font & Theme Customization:** ✅ IMPLEMENTED
-  - Settings menu to adjust font face (Serif/Sans), size (14-28px), and line height (1.4-2.2)
-  - Six theme options: Light, Dark, OLED Black, Sepia, Retro, and Material You
-  - Material You generates dynamic color palettes from user-selected seed color using HCT color science
+- **Theme Customization:** ✅ IMPLEMENTED
+  - Settings menu to choose between Light, Dark, and AMOLED themes
+  - Customizable accent color with 8 presets or custom color picker
   - All settings persist in localStorage
 
 - **Swipe Gestures:**
@@ -316,7 +294,7 @@ Since there is no backend server to run queries, the app relies on a client-side
 1. Push this code to a GitHub repository.
 2. Go to **Settings > Pages**.
 3. Select **Source: Deploy from a branch**.
-4. Select **Branch: main** (or master) and **folder: / (root)**.
+4. Select **Branch: main** (or master) and **folder: / (root)**
 5. Save. Your PWA is now live globally.
 
 ---

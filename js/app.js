@@ -178,9 +178,6 @@ const App = {
 // --- SETTINGS MODULE ---
 const Settings = {
     defaults: {
-        fontFamily: 'serif',
-        fontSize: 19,
-        lineHeight: 1.7,
         theme: 'light',
         accentColor: '#0061a4'
     },
@@ -197,15 +194,6 @@ const Settings = {
     load: () => {
         Settings.current = { ...Settings.defaults };
         
-        const fontFamily = AppAPI.getGlobal("BibleFontFamily");
-        if(fontFamily) Settings.current.fontFamily = fontFamily;
-        
-        const fontSize = AppAPI.getGlobal("BibleFontSize");
-        if(fontSize) Settings.current.fontSize = parseInt(fontSize);
-        
-        const lineHeight = AppAPI.getGlobal("BibleLineHeight");
-        if(lineHeight) Settings.current.lineHeight = parseFloat(lineHeight);
-        
         const theme = AppAPI.getGlobal("BibleThemeMode");
         if(theme) Settings.current.theme = theme;
         
@@ -215,66 +203,14 @@ const Settings = {
     
     // Save current settings to localStorage
     save: () => {
-        AppAPI.setGlobal("BibleFontFamily", Settings.current.fontFamily);
-        AppAPI.setGlobal("BibleFontSize", Settings.current.fontSize.toString());
-        AppAPI.setGlobal("BibleLineHeight", Settings.current.lineHeight.toString());
         AppAPI.setGlobal("BibleThemeMode", Settings.current.theme);
         AppAPI.setGlobal("BibleAccentColor", Settings.current.accentColor);
     },
     
     // Apply all settings
     applyAll: () => {
-        Settings.applyFontFamily(Settings.current.fontFamily);
-        Settings.applyFontSize(Settings.current.fontSize);
-        Settings.applyLineHeight(Settings.current.lineHeight);
         Settings.applyTheme(Settings.current.theme);
         Settings.applyAccentColor(Settings.current.accentColor);
-    },
-    
-    // Font Family
-    setFontFamily: (family) => {
-        Settings.current.fontFamily = family;
-        Settings.applyFontFamily(family);
-        Settings.save();
-    },
-    
-    applyFontFamily: (family) => {
-        const root = document.documentElement;
-        if(family === 'sans') {
-            root.style.setProperty('--font-family', "var(--font-sans)");
-        } else {
-            root.style.setProperty('--font-family', "var(--font-serif)");
-        }
-        
-        // Update UI
-        document.getElementById('fontSerifBtn').classList.toggle('active', family === 'serif');
-        document.getElementById('fontSansBtn').classList.toggle('active', family === 'sans');
-    },
-    
-    // Font Size
-    setFontSize: (size) => {
-        Settings.current.fontSize = parseInt(size);
-        Settings.applyFontSize(size);
-        Settings.save();
-    },
-    
-    applyFontSize: (size) => {
-        document.documentElement.style.setProperty('--font-size', size + 'px');
-        document.getElementById('fontSizeSlider').value = size;
-        document.getElementById('fontSizeValue').textContent = size + 'px';
-    },
-    
-    // Line Height
-    setLineHeight: (height) => {
-        Settings.current.lineHeight = parseFloat(height);
-        Settings.applyLineHeight(height);
-        Settings.save();
-    },
-    
-    applyLineHeight: (height) => {
-        document.documentElement.style.setProperty('--line-height', height);
-        document.getElementById('lineHeightSlider').value = height;
-        document.getElementById('lineHeightValue').textContent = height;
     },
     
     // Theme
@@ -292,8 +228,6 @@ const Settings = {
         document.querySelectorAll('.theme-option').forEach(el => {
             el.classList.toggle('active', el.dataset.themeOption === theme);
         });
-        
-        // Theme icon removed from header - theme is changed via Settings modal
     },
     
     // Accent Color
@@ -315,7 +249,6 @@ const Settings = {
         
         // Generate lighter/darker variants
         const rgb = Settings.hexToRgb(hexColor);
-        const hsl = Settings.rgbToHsl(rgb.r, rgb.g, rgb.b);
         
         // For light themes, use the color as-is for primary
         // For dark themes, lighten the color
@@ -358,25 +291,6 @@ const Settings = {
         } : { r: 0, g: 0, b: 0 };
     },
     
-    rgbToHsl: (r, g, b) => {
-        r /= 255; g /= 255; b /= 255;
-        const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
-        
-        if(max === min) {
-            h = s = 0;
-        } else {
-            const d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            switch(max) {
-                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-                case g: h = ((b - r) / d + 2) / 6; break;
-                case b: h = ((r - g) / d + 4) / 6; break;
-            }
-        }
-        return { h, s, l };
-    },
-    
     lightenColor: (hex, amount) => {
         const rgb = Settings.hexToRgb(hex);
         const r = Math.min(255, Math.round(rgb.r + (255 - rgb.r) * amount));
@@ -409,9 +323,6 @@ const Settings = {
     // Modal controls
     openModal: () => {
         // Sync UI with current settings
-        Settings.applyFontFamily(Settings.current.fontFamily);
-        Settings.applyFontSize(Settings.current.fontSize);
-        Settings.applyLineHeight(Settings.current.lineHeight);
         Settings.applyTheme(Settings.current.theme);
         document.getElementById('accentColorPicker').value = Settings.current.accentColor;
         
