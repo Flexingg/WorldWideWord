@@ -538,7 +538,7 @@ const Selector = {
             }
         }
         
-        const cleanQ = query.toLowerCase().replace(/\\/g, "").replace(/\[/g, "").replace(/\]/g, "");
+        const cleanQ = query.toLowerCase().replace(/[\\]/g, "").replace(/\[/g, "").replace(/\]/g, "");
         
         // Filter
         let results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
@@ -591,10 +591,13 @@ const Selector = {
             document.querySelector('.search-wrapper').classList.add('hidden');
             document.getElementById('btnBack').classList.remove('hidden');
             document.getElementById('btnBack').onclick = App.navBack;
+            document.getElementById('historyList').classList.add('hidden');
+            document.getElementById('bookGrid').classList.add('hidden');
+            document.querySelector('.search-wrapper').classList.add('hidden');
+            document.getElementById('btnBack').classList.add('hidden');
             document.getElementById('headerLabel').innerText = "History";
             
             const raw = AppAPI.getGlobal("BibleHistory");
-            hList.innerHTML = '';
             if(raw) {
                 JSON.parse(raw).forEach(c => {
                     const el = document.createElement('div'); el.className = 'list-item';
@@ -696,7 +699,7 @@ const Reader = {
             if(m) {
                 const vNum = m[1], vText = m[2].trim(), vId = `v-${vNum}`;
                 
-                // 1. Build Token List (Objects) not String
+                // 1. Build token list (objects) not string
                 let tokens = [];
                 const parts = vText.split(/(\[\[[HG]\d+]\])/);
 
@@ -718,7 +721,7 @@ const Reader = {
                     } else if (p.match(/\s+/)) tokens.push({ type: 'space', text: p });
                 });
                 
-                // 2. Render Tokens to HTML
+                // 2. Render tokens to HTML
                 let wordsHtml = "";
                 let wIdx = 0;
                 tokens.forEach(t => {
@@ -975,6 +978,7 @@ const ReadingPlans = {
     availablePlans: [],
     loadedPlans: {},
     expandedDays: new Set(),
+    subscribedPlans: [],
     
     // Initialize - load subscribed plans from localStorage
     init: function() {
@@ -982,6 +986,8 @@ const ReadingPlans = {
         if (raw) {
             try { this.subscribedPlans = JSON.parse(raw); }
             catch (e) { this.subscribedPlans = []; }
+        } else {
+            this.subscribedPlans = [];
         }
     },
     
@@ -1102,6 +1108,11 @@ const ReadingPlans = {
         const chapter = match[2];
         const name = book + ' ' + chapter;
         const path = 'bibles/BSB/BER-' + book + '/' + name + '.md';
+        
+        // Hide plan views before loading reader
+        document.getElementById('view-plans').classList.add('hidden');
+        document.getElementById('view-plans-grid').classList.add('hidden');
+        
         Reader.load(path, name);
     },
     
@@ -1160,7 +1171,7 @@ const ReadingPlans = {
                 : 
                     '<div class="plan-meta">' + plan.totalDays + ' days • Tap to preview</div>' +
                     '<div class="plan-actions">' +
-                        '<button class="btn-fill" onclick="event.stopPropagation(); ReadingPlans.subscribe(\'' + plan.id + '\'); ReadingPlans.showPlanGrid(\'' + plan.id + '\');">Subscribe</button>' +
+                        '<button class="btn-fill" onclick="event.stopPropagation(); ReadingPlans.subscribe(\'' + plan.id + '\'); ReadingPlans.showPlanGrid(\'' + plan.id + '\');">Subscribe to Plan</button>' +
                         '<button class="btn-text" onclick="ReadingPlans.showPreview(\'' + plan.id + '\')">Preview</button>' +
                     '</div>'
                 );
