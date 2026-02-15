@@ -122,8 +122,7 @@ const Router = {
 // --- APP STATE ---
 const App = {
     init: () => {
-        const theme = AppAPI.getGlobal("BibleThemeMode");
-        if(theme) App.applyTheme(theme);
+        Settings.init();
         Selector.init();
         ReadingPlans.init();
         
@@ -138,12 +137,14 @@ const App = {
     },
     applyTheme: (t) => {
         document.documentElement.setAttribute('data-theme', t);
-        document.getElementById('themeIcon').innerText = t === "light" ? "dark_mode" : "light_mode";
+        // Update theme icon based on theme type
+        const icon = document.getElementById('themeIcon');
+        const isDark = ['dark', 'oled'].includes(t);
+        icon.innerText = isDark ? "light_mode" : "dark_mode";
     },
     toggleTheme: () => {
-        const next = document.documentElement.getAttribute('data-theme') === "light" ? "dark" : "light";
-        App.applyTheme(next);
-        AppAPI.setGlobal("BibleThemeMode", next);
+        // Open settings modal instead of cycling
+        Settings.openModal();
     },
     navBack: () => {
         // Use browser history for back navigation
@@ -173,6 +174,361 @@ const App = {
         
         // Ensure we are on the Book Grid (Force Reset)
         Selector.reset(true); 
+    }
+};
+
+// --- SETTINGS MODULE ---
+const Settings = {
+    defaults: {
+        fontFamily: 'serif',
+        fontSize: 19,
+        lineHeight: 1.7,
+        theme: 'light',
+        materialYouColor: '#0061a4'
+    },
+    
+    current: {},
+    
+    // Initialize settings from localStorage
+    init: () => {
+        Settings.load();
+        Settings.applyAll();
+    },
+    
+    // Load settings from localStorage
+    load: () => {
+        Settings.current = { ...Settings.defaults };
+        
+        const fontFamily = AppAPI.getGlobal("BibleFontFamily");
+        if(fontFamily) Settings.current.fontFamily = fontFamily;
+        
+        const fontSize = AppAPI.getGlobal("BibleFontSize");
+        if(fontSize) Settings.current.fontSize = parseInt(fontSize);
+        
+        const lineHeight = AppAPI.getGlobal("BibleLineHeight");
+        if(lineHeight) Settings.current.lineHeight = parseFloat(lineHeight);
+        
+        const theme = AppAPI.getGlobal("BibleThemeMode");
+        if(theme) Settings.current.theme = theme;
+        
+        const materialYouColor = AppAPI.getGlobal("BibleMaterialYouColor");
+        if(materialYouColor) Settings.current.materialYouColor = materialYouColor;
+    },
+    
+    // Save current settings to localStorage
+    save: () => {
+        AppAPI.setGlobal("BibleFontFamily", Settings.current.fontFamily);
+        AppAPI.setGlobal("BibleFontSize", Settings.current.fontSize.toString());
+        AppAPI.setGlobal("BibleLineHeight", Settings.current.lineHeight.toString());
+        AppAPI.setGlobal("BibleThemeMode", Settings.current.theme);
+        AppAPI.setGlobal("BibleMaterialYouColor", Settings.current.materialYouColor);
+    },
+    
+    // Apply all settings
+    applyAll: () => {
+        Settings.applyFontFamily(Settings.current.fontFamily);
+        Settings.applyFontSize(Settings.current.fontSize);
+        Settings.applyLineHeight(Settings.current.lineHeight);
+        Settings.applyTheme(Settings.current.theme);
+    },
+    
+    // Font Family
+    setFontFamily: (family) => {
+        Settings.current.fontFamily = family;
+        Settings.applyFontFamily(family);
+        Settings.save();
+    },
+    
+    applyFontFamily: (family) => {
+        const root = document.documentElement;
+        if(family === 'sans') {
+            root.style.setProperty('--font-family', "var(--font-sans)");
+        } else {
+            root.style.setProperty('--font-family', "var(--font-serif)");
+        }
+        
+        // Update UI
+        document.getElementById('fontSerifBtn').classList.toggle('active', family === 'serif');
+        document.getElementById('fontSansBtn').classList.toggle('active', family === 'sans');
+    },
+    
+    // Font Size
+    setFontSize: (size) => {
+        Settings.current.fontSize = parseInt(size);
+        Settings.applyFontSize(size);
+        Settings.save();
+    },
+    
+    applyFontSize: (size) => {
+        document.documentElement.style.setProperty('--font-size', size + 'px');
+        document.getElementById('fontSizeSlider').value = size;
+        document.getElementById('fontSizeValue').textContent = size + 'px';
+    },
+    
+    // Line Height
+    setLineHeight: (height) => {
+        Settings.current.lineHeight = parseFloat(height);
+        Settings.applyLineHeight(height);
+        Settings.save();
+    },
+    
+    applyLineHeight: (height) => {
+        document.documentElement.style.setProperty('--line-height', height);
+        document.getElementById('lineHeightSlider').value = height;
+        document.getElementById('lineHeightValue').textContent = height;
+    },
+    
+    // Theme
+    setTheme: (theme) => {
+        Settings.current.theme = theme;
+        Settings.applyTheme(theme);
+        Settings.save();
+    },
+    
+    applyTheme: (theme) => {
+        if(theme === 'materialYou') {
+            Settings.applyMaterialYouColors(Settings.current.materialYouColor);
+        }
+        
+        document.documentElement.setAttribute('data-theme', theme);
+        
+        // Update theme options UI
+        document.querySelectorAll('.theme-option').forEach(el => {
+            el.classList.toggle('active', el.dataset.themeOption === theme);
+        });
+        
+        // Show/hide Material You color picker
+        const mySection = document.getElementById('materialYouSection');
+        if(mySection) mySection.classList.toggle('visible', theme === 'materialYou');
+        
+        // Update theme icon
+        const icon = document.getElementById('themeIcon');
+        const isDark = ['dark', 'oled'].includes(theme);
+        icon.innerText = isDark ? "light_mode" : "dark_mode";
+    },
+    
+    // Material You Color
+    setMaterialYouColor: (color) => {
+        Settings.current.materialYouColor = color;
+        Settings.applyMaterialYouColors(color);
+        Settings.save();
+        
+        // Update color picker and presets
+        document.getElementById('materialYouColorPicker').value = color;
+        document.querySelectorAll('.color-preset').forEach(el => {
+            el.classList.toggle('active', el.style.background === color);
+        });
+    },
+    
+    applyMaterialYouColors: (seedColor) => {
+        const palette = HCTColorGenerator.generatePalette(seedColor);
+        const root = document.documentElement;
+        
+        root.style.setProperty('--bg-color', palette.neutral[98]);
+        root.style.setProperty('--surface-color', palette.neutral[98]);
+        root.style.setProperty('--surface-container', palette.neutral[90]);
+        root.style.setProperty('--surface-island', palette.neutral[100]);
+        root.style.setProperty('--text-color', palette.neutral[10]);
+        root.style.setProperty('--text-subtle', palette.neutral[40]);
+        root.style.setProperty('--primary-color', palette.primary[40]);
+        root.style.setProperty('--on-primary', palette.primary[100]);
+        root.style.setProperty('--primary-container', palette.primary[90]);
+        root.style.setProperty('--on-primary-container', palette.primary[10]);
+        root.style.setProperty('--surface-variant', palette.neutralVariant[80]);
+        root.style.setProperty('--selection-overlay', palette.primary[90]);
+        
+        // Update wave primary SVG
+        const wavePrimary = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='6' viewBox='0 0 20 6'%3E%3Cpath d='M0 3 Q5 0 10 3 T20 3' fill='none' stroke='${encodeURIComponent(palette.primary[40])}' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")`;
+        root.style.setProperty('--wave-primary', wavePrimary);
+    },
+    
+    // Reset to defaults
+    reset: () => {
+        Settings.current = { ...Settings.defaults };
+        Settings.applyAll();
+        Settings.save();
+    },
+    
+    // Modal controls
+    openModal: () => {
+        // Sync UI with current settings
+        Settings.applyFontFamily(Settings.current.fontFamily);
+        Settings.applyFontSize(Settings.current.fontSize);
+        Settings.applyLineHeight(Settings.current.lineHeight);
+        Settings.applyTheme(Settings.current.theme);
+        document.getElementById('materialYouColorPicker').value = Settings.current.materialYouColor;
+        
+        document.getElementById('settingsModal').classList.add('open');
+    },
+    
+    closeModal: (e) => {
+        if(e && e.target.id !== 'settingsModal') return;
+        document.getElementById('settingsModal').classList.remove('open');
+    }
+};
+
+// --- HCT COLOR GENERATOR (Material You) ---
+const HCTColorGenerator = {
+    // Generate full palette from seed color
+    generatePalette: (hexSeed) => {
+        const hct = HCTColorGenerator.hexToHCT(hexSeed);
+        
+        return {
+            primary: HCTColorGenerator.generateTonalPalette(hct.hue, Math.max(hct.chroma, 48)),
+            secondary: HCTColorGenerator.generateTonalPalette(hct.hue, hct.chroma * 0.3),
+            tertiary: HCTColorGenerator.generateTonalPalette((hct.hue + 60) % 360, Math.max(hct.chroma * 0.6, 24)),
+            neutral: HCTColorGenerator.generateTonalPalette(hct.hue, hct.chroma * 0.1),
+            neutralVariant: HCTColorGenerator.generateTonalPalette(hct.hue, hct.chroma * 0.2)
+        };
+    },
+    
+    // Generate tonal palette (light to dark)
+    generateTonalPalette: (hue, chroma) => {
+        const tones = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 98, 100];
+        const palette = {};
+        
+        tones.forEach(tone => {
+            palette[tone] = HCTColorGenerator.hctToHex(hue, chroma, tone);
+        });
+        
+        return palette;
+    },
+    
+    // Convert hex to HCT
+    hexToHCT: (hex) => {
+        const rgb = HCTColorGenerator.hexToRGB(hex);
+        const xyz = HCTColorGenerator.rgbToXYZ(rgb);
+        const cam16 = HCTColorGenerator.xyzToCAM16(xyz);
+        
+        return {
+            hue: cam16.hue,
+            chroma: cam16.chroma,
+            tone: HCTColorGenerator.xyzToTone(xyz)
+        };
+    },
+    
+    // Convert HCT to hex
+    hctToHex: (hue, chroma, tone) => {
+        // Find the color with the target tone
+        const xyz = HCTColorGenerator.solveToXYZ(hue, chroma, tone);
+        const rgb = HCTColorGenerator.xyzToRGB(xyz);
+        return HCTColorGenerator.rgbToHex(rgb);
+    },
+    
+    // Hex to RGB
+    hexToRGB: (hex) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 0, b: 0 };
+    },
+    
+    // RGB to hex
+    rgbToHex: (rgb) => {
+        const toHex = (c) => {
+            const clamped = Math.max(0, Math.min(255, Math.round(c)));
+            const hex = clamped.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        };
+        return '#' + toHex(rgb.r) + toHex(rgb.g) + toHex(rgb.b);
+    },
+    
+    // RGB to XYZ (D65 illuminant)
+    rgbToXYZ: (rgb) => {
+        const linearize = (c) => {
+            c = c / 255;
+            return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        };
+        
+        const r = linearize(rgb.r);
+        const g = linearize(rgb.g);
+        const b = linearize(rgb.b);
+        
+        return {
+            x: (r * 0.4124564 + g * 0.3575761 + b * 0.1804375) * 100,
+            y: (r * 0.2126729 + g * 0.7151522 + b * 0.0721750) * 100,
+            z: (r * 0.0193339 + g * 0.1191920 + b * 0.9503041) * 100
+        };
+    },
+    
+    // XYZ to RGB
+    xyzToRGB: (xyz) => {
+        const x = xyz.x / 100;
+        const y = xyz.y / 100;
+        const z = xyz.z / 100;
+        
+        const delinearize = (c) => {
+            c = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1/2.4) - 0.055;
+            return Math.max(0, Math.min(255, c * 255));
+        };
+        
+        return {
+            r: delinearize(x * 3.2404542 + y * -1.5371385 + z * -0.4985314),
+            g: delinearize(x * -0.9692660 + y * 1.8760108 + z * 0.0415560),
+            b: delinearize(x * 0.0556434 + y * -0.2040259 + z * 1.0572252)
+        };
+    },
+    
+    // XYZ to CAM16 (simplified)
+    xyzToCAM16: (xyz) => {
+        // Viewing conditions for standard environment
+        const whitePoint = { x: 95.047, y: 100.0, z: 108.883 };
+        const surround = 2.0; // Average surround
+        const adaptingLuminance = 64 / Math.PI;
+        const backgroundLuminance = 20;
+        
+        // Calculate luminance
+        const yw = xyz.y / whitePoint.y;
+        
+        // Calculate cone responses
+        const rC = (xyz.x * 1.86206786 - xyz.y * 1.01125463 + xyz.z * 0.14918677) / 100;
+        const gC = (xyz.x * 0.38752654 + xyz.y * 0.62144744 - xyz.z * 0.00897398) / 100;
+        const bC = (xyz.x * -0.01584150 - xyz.y * 0.03412294 + xyz.z * 1.0572252) / 100;
+        
+        // Calculate hue
+        const a = rC - 12 * gC / 11 + bC / 11;
+        const b = (rC + gC - 2 * bC) / 9;
+        const hueRadians = Math.atan2(b, a);
+        const hue = (hueRadians * 180 / Math.PI + 360) % 360;
+        
+        // Calculate chroma (simplified)
+        const chroma = Math.sqrt(a * a + b * b) * 1.5;
+        
+        return { hue, chroma };
+    },
+    
+    // XYZ to L* (tone)
+    xyzToTone: (xyz) => {
+        const y = xyz.y / 100;
+        const f = y > 0.008856 ? Math.pow(y, 1/3) : (903.3 * y + 16) / 116;
+        return 116 * f - 16;
+    },
+    
+    // Solve for XYZ given HCT (iterative approach)
+    solveToXYZ: (hue, chroma, tone) => {
+        // Convert hue to radians
+        const hueRad = hue * Math.PI / 180;
+        
+        // Estimate initial chroma
+        const j = tone;
+        const q = (4 / 100) * j * (1 + (100 - j) / 100);
+        const alpha = chroma / Math.sqrt(q);
+        
+        // Calculate a and b
+        const a = alpha * Math.cos(hueRad);
+        const b = alpha * Math.sin(hueRad);
+        
+        // Convert back to XYZ
+        const yFromTone = (tone + 16) / 116;
+        const y = yFromTone > 0.206897 ? yFromTone * yFromTone * yFromTone : 0.128419 * yFromTone - 0.0177139;
+        
+        // Approximate x and z from a and b
+        const x = y * (1 + a / 100);
+        const z = y * (1 - b / 100);
+        
+        return { x: x * 100, y: y * 100, z: z * 100 };
     }
 };
 

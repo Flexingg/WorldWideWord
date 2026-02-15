@@ -67,6 +67,43 @@ When reading a chapter, tap the **share icon** (share) in the header to:
 - Use browser **back/forward** buttons to navigate through your reading history
 - The URL updates automatically as you browse books, chapters, and plans
 
+### 🎨 Font & Theme Customization
+
+WordWideWeb offers extensive customization options for a personalized reading experience. Access settings by tapping the **gear icon** (⚙️) in the header.
+
+#### Font Settings
+
+| Setting | Options | Default |
+|---------|---------|---------|
+| Font Family | Serif, Sans-serif | Serif |
+| Font Size | 14px - 28px | 19px |
+| Line Height | 1.4 - 2.2 | 1.7 |
+
+#### Theme Options
+
+| Theme | Description |
+|-------|-------------|
+| **Light** | Clean, bright interface with blue accents |
+| **Dark** | Dark gray background with light text, reduces eye strain |
+| **OLED Black** | Pure black background, ideal for AMOLED screens |
+| **Sepia** | Warm, paper-like tones for comfortable reading |
+| **Retro** | Vintage aesthetic with orange accents |
+| **Material You** | Dynamic colors generated from your chosen seed color |
+
+#### Material You Theme
+
+The Material You theme uses HCT (Hue, Chroma, Tone) color science to generate a complete color palette from a single seed color:
+
+1. **Choose a seed color** using the color picker or select from 8 presets
+2. **Automatic palette generation** creates:
+   - Primary colors (for buttons, links, highlights)
+   - Secondary colors (for subtle accents)
+   - Tertiary colors (for complementary elements)
+   - Neutral colors (for backgrounds and text)
+3. **Tonal palettes** ensure proper contrast ratios for accessibility
+
+All settings are automatically saved to your browser's localStorage and persist across sessions.
+
 ## 🏗️ Technical Architecture
 
 The application is built with Vanilla JavaScript (ES6+) and CSS Variables, requiring no build frameworks (React/Vue) or bundlers.
@@ -135,9 +172,11 @@ We are actively developing new features. Here is the priority list:
   - Mobile share functionality with Web Share API
   - Direct links to books, plans, and search queries
 
-- **Font & Theme Customization:**
-  - Settings menu to adjust font face (Serif/Sans), size, and line height
-  - Expanded theme options (OLED Black, Sepia)
+- **Font & Theme Customization:** ✅ IMPLEMENTED
+  - Settings menu to adjust font face (Serif/Sans), size (14-28px), and line height (1.4-2.2)
+  - Six theme options: Light, Dark, OLED Black, Sepia, Retro, and Material You
+  - Material You generates dynamic color palettes from user-selected seed color using HCT color science
+  - All settings persist in localStorage
 
 - **Swipe Gestures:**
   - Horizontal swipe detection on the reader view

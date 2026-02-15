@@ -30,6 +30,7 @@
         <button class="nav-btn hidden" id="btnAudio" onclick="ReaderAudio.toggleUI()"><span class="material-icons-round">headphones</span></button>
         <button class="nav-btn hidden" id="btnNextChap" onclick="Reader.navNext()"><span class="material-icons-round">chevron_right</span></button>
         <!-- Global -->
+        <button class="icon-btn" onclick="Settings.openModal()"><span class="material-icons-round">settings</span></button>
         <button class="icon-btn" onclick="App.toggleTheme()"><span class="material-icons-round" id="themeIcon">dark_mode</span></button>
     </div>
 </header>
@@ -186,6 +187,107 @@
             <button class="btn-text" onclick="Reader.deleteNote()">Delete</button>
             <button class="btn-fill" onclick="Reader.saveNote()">Save</button>
         </div>
+    </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" onclick="Settings.closeModal(event)">
+    <div class="settings-card" onclick="event.stopPropagation()">
+        <div class="settings-header">
+            <span class="settings-title">Settings</span>
+            <button class="settings-close" onclick="Settings.closeModal()">
+                <span class="material-icons-round">close</span>
+            </button>
+        </div>
+        
+        <!-- Reading Section -->
+        <div class="settings-section">
+            <div class="settings-section-title">
+                <span class="material-icons-round">text_fields</span>
+                Reading
+            </div>
+            
+            <div class="settings-row">
+                <span class="settings-label">Font Family</span>
+                <div class="font-toggle">
+                    <button class="font-toggle-btn active" id="fontSerifBtn" onclick="Settings.setFontFamily('serif')">Serif</button>
+                    <button class="font-toggle-btn" id="fontSansBtn" onclick="Settings.setFontFamily('sans')">Sans</button>
+                </div>
+            </div>
+            
+            <div class="settings-row">
+                <span class="settings-label">Font Size</span>
+                <div class="settings-slider">
+                    <input type="range" class="h-slider" id="fontSizeSlider" min="14" max="28" value="19" oninput="Settings.setFontSize(this.value)">
+                    <span class="settings-value" id="fontSizeValue">19px</span>
+                </div>
+            </div>
+            
+            <div class="settings-row">
+                <span class="settings-label">Line Height</span>
+                <div class="settings-slider">
+                    <input type="range" class="h-slider" id="lineHeightSlider" min="1.4" max="2.2" step="0.1" value="1.7" oninput="Settings.setLineHeight(this.value)">
+                    <span class="settings-value" id="lineHeightValue">1.7</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Appearance Section -->
+        <div class="settings-section">
+            <div class="settings-section-title">
+                <span class="material-icons-round">palette</span>
+                Appearance
+            </div>
+            
+            <div class="theme-grid">
+                <div class="theme-option" data-theme-option="light" onclick="Settings.setTheme('light')">
+                    <div class="theme-preview theme-preview-light"></div>
+                    <span class="theme-name">Light</span>
+                </div>
+                <div class="theme-option" data-theme-option="dark" onclick="Settings.setTheme('dark')">
+                    <div class="theme-preview theme-preview-dark"></div>
+                    <span class="theme-name">Dark</span>
+                </div>
+                <div class="theme-option" data-theme-option="oled" onclick="Settings.setTheme('oled')">
+                    <div class="theme-preview theme-preview-oled"></div>
+                    <span class="theme-name">OLED</span>
+                </div>
+                <div class="theme-option" data-theme-option="sepia" onclick="Settings.setTheme('sepia')">
+                    <div class="theme-preview theme-preview-sepia"></div>
+                    <span class="theme-name">Sepia</span>
+                </div>
+                <div class="theme-option" data-theme-option="retro" onclick="Settings.setTheme('retro')">
+                    <div class="theme-preview theme-preview-retro"></div>
+                    <span class="theme-name">Retro</span>
+                </div>
+                <div class="theme-option" data-theme-option="materialYou" onclick="Settings.setTheme('materialYou')">
+                    <div class="theme-preview theme-preview-materialYou"></div>
+                    <span class="theme-name">Material You</span>
+                </div>
+            </div>
+            
+            <!-- Material You Color Picker -->
+            <div class="material-you-section" id="materialYouSection">
+                <div class="settings-label">Choose your color</div>
+                <div class="color-picker-wrapper">
+                    <input type="color" class="color-picker-input" id="materialYouColorPicker" value="#0061a4" onchange="Settings.setMaterialYouColor(this.value)">
+                    <div class="color-presets">
+                        <div class="color-preset" style="background: #0061a4" onclick="Settings.setMaterialYouColor('#0061a4')"></div>
+                        <div class="color-preset" style="background: #d93025" onclick="Settings.setMaterialYouColor('#d93025')"></div>
+                        <div class="color-preset" style="background: #1e8e3e" onclick="Settings.setMaterialYouColor('#1e8e3e')"></div>
+                        <div class="color-preset" style="background: #f9ab00" onclick="Settings.setMaterialYouColor('#f9ab00')"></div>
+                        <div class="color-preset" style="background: #9334e6" onclick="Settings.setMaterialYouColor('#9334e6')"></div>
+                        <div class="color-preset" style="background: #0b8043" onclick="Settings.setMaterialYouColor('#0b8043')"></div>
+                        <div class="color-preset" style="background: #e8710a" onclick="Settings.setMaterialYouColor('#e8710a')"></div>
+                        <div class="color-preset" style="background: #149da6" onclick="Settings.setMaterialYouColor('#149da6')"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="settings-reset" onclick="Settings.reset()">
+            Reset to Defaults
+        </button>
     </div>
 </div>
 
