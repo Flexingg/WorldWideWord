@@ -1,12 +1,12 @@
-const CACHE_NAME = "bible-app-v3";
+const CACHE_NAME = "bible-app-v4";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/app.js",
-  "./js/adapter.js",
-  "https://fonts.googleapis.com/css2?family=Roboto+Serif:opsz,wght@8..144,400;500&family=Roboto:wght@400;500;700&display=swap",
-  "https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+  "./js/adapter.js"
+  // Note: External Google Fonts removed - they cause CORS issues when cached from service worker
+  // Fonts will still load via HTML <link> tags and be cached by the browser
 ];
 
 self.addEventListener("install", (e) => {

@@ -1,6 +1,7 @@
 /**
  * Adapter: Pure Web Implementation
  */
+console.log('[DEBUG] adapter.js - Script started loading');
 
 const AppAPI = {
     readFile: async (path) => {
@@ -44,3 +45,6 @@ const AppAPI = {
     setGlobal: (key, val) => localStorage.setItem("Settings_" + key, val),
     getGlobal: (key) => localStorage.getItem("Settings_" + key)
 };
+
+console.log('[DEBUG] adapter.js - Script finished loading');
+console.log('[DEBUG] AppAPI defined?', typeof AppAPI !== 'undefined');

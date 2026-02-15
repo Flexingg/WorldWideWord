@@ -14,14 +14,5 @@
     "totalDays": 90,
     "startMode": "subscription",
     "icon": "auto_stories"
-  },
-  {
-    "id": "chronological-annual",
-    "name": "Chronological Reading Plan",
-    "description": "Read the Bible in historical order. Starts January 1st each year.",
-    "totalDays": 365,
-    "startMode": "calendar",
-    "startDate": "01-01",
-    "icon": "schedule"
   }
 ]

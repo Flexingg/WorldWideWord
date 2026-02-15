@@ -1,6 +1,7 @@
 /**
  * WordWideWeb - Pure Web Logic
  */
+console.log('[DEBUG] app.js - Script started loading');
 
 const BOOKS = [{"n":"Genesis","c":50},{"n":"Exodus","c":40},{"n":"Leviticus","c":27},{"n":"Numbers","c":36},{"n":"Deuteronomy","c":34},{"n":"Joshua","c":24},{"n":"Judges","c":21},{"n":"Ruth","c":4},{"n":"1 Samuel","c":31},{"n":"2 Samuel","c":24},{"n":"1 Kings","c":22},{"n":"2 Kings","c":25},{"n":"1 Chronicles","c":29},{"n":"2 Chronicles","c":36},{"n":"Ezra","c":10},{"n":"Nehemiah","c":13},{"n":"Esther","c":10},{"n":"Job","c":42},{"n":"Psalms","c":150},{"n":"Proverbs","c":31},{"n":"Ecclesiastes","c":12},{"n":"Song of Solomon","c":8},{"n":"Isaiah","c":66},{"n":"Jeremiah","c":52},{"n":"Lamentations","c":5},{"n":"Ezekiel","c":48},{"n":"Daniel","c":12},{"n":"Hosea","c":14},{"n":"Joel","c":3},{"n":"Amos","c":9},{"n":"Obadiah","c":1},{"n":"Jonah","c":4},{"n":"Micah","c":7},{"n":"Nahum","c":3},{"n":"Habakkuk","c":3},{"n":"Zephaniah","c":3},{"n":"Haggai","c":2},{"n":"Zechariah","c":14},{"n":"Malachi","c":4},{"n":"Matthew","c":28},{"n":"Mark","c":16},{"n":"Luke","c":24},{"n":"John","c":21},{"n":"Acts","c":28},{"n":"Romans","c":16},{"n":"1 Corinthians","c":16},{"n":"2 Corinthians","c":13},{"n":"Galatians","c":6},{"n":"Ephesians","c":6},{"n":"Philippians","c":4},{"n":"Colossians","c":4},{"n":"1 Thessalonians","c":5},{"n":"2 Thessalonians","c":3},{"n":"1 Timothy","c":6},{"n":"2 Timothy","c":4},{"n":"Titus","c":3},{"n":"Philemon","c":1},{"n":"Hebrews","c":13},{"n":"James","c":5},{"n":"1 Peter","c":5},{"n":"2 Peter","c":3},{"n":"1 John","c":5},{"n":"2 John","c":1},{"n":"3 John","c":1},{"n":"Jude","c":1},{"n":"Revelation","c":22 }];
 
@@ -184,7 +185,7 @@ const Settings = {
         fontSize: 19,
         lineHeight: 1.7,
         theme: 'light',
-        materialYouColor: '#0061a4'
+        accentColor: '#0061a4'
     },
     
     current: {},
@@ -211,8 +212,8 @@ const Settings = {
         const theme = AppAPI.getGlobal("BibleThemeMode");
         if(theme) Settings.current.theme = theme;
         
-        const materialYouColor = AppAPI.getGlobal("BibleMaterialYouColor");
-        if(materialYouColor) Settings.current.materialYouColor = materialYouColor;
+        const accentColor = AppAPI.getGlobal("BibleAccentColor");
+        if(accentColor) Settings.current.accentColor = accentColor;
     },
     
     // Save current settings to localStorage
@@ -221,7 +222,7 @@ const Settings = {
         AppAPI.setGlobal("BibleFontSize", Settings.current.fontSize.toString());
         AppAPI.setGlobal("BibleLineHeight", Settings.current.lineHeight.toString());
         AppAPI.setGlobal("BibleThemeMode", Settings.current.theme);
-        AppAPI.setGlobal("BibleMaterialYouColor", Settings.current.materialYouColor);
+        AppAPI.setGlobal("BibleAccentColor", Settings.current.accentColor);
     },
     
     // Apply all settings
@@ -230,6 +231,7 @@ const Settings = {
         Settings.applyFontSize(Settings.current.fontSize);
         Settings.applyLineHeight(Settings.current.lineHeight);
         Settings.applyTheme(Settings.current.theme);
+        Settings.applyAccentColor(Settings.current.accentColor);
     },
     
     // Font Family
@@ -282,14 +284,11 @@ const Settings = {
     setTheme: (theme) => {
         Settings.current.theme = theme;
         Settings.applyTheme(theme);
+        Settings.applyAccentColor(Settings.current.accentColor);
         Settings.save();
     },
     
     applyTheme: (theme) => {
-        if(theme === 'materialYou') {
-            Settings.applyMaterialYouColors(Settings.current.materialYouColor);
-        }
-        
         document.documentElement.setAttribute('data-theme', theme);
         
         // Update theme options UI
@@ -297,49 +296,113 @@ const Settings = {
             el.classList.toggle('active', el.dataset.themeOption === theme);
         });
         
-        // Show/hide Material You color picker
-        const mySection = document.getElementById('materialYouSection');
-        if(mySection) mySection.classList.toggle('visible', theme === 'materialYou');
-        
         // Update theme icon
         const icon = document.getElementById('themeIcon');
         const isDark = ['dark', 'oled'].includes(theme);
         icon.innerText = isDark ? "light_mode" : "dark_mode";
     },
     
-    // Material You Color
-    setMaterialYouColor: (color) => {
-        Settings.current.materialYouColor = color;
-        Settings.applyMaterialYouColors(color);
+    // Accent Color
+    setAccentColor: (color) => {
+        Settings.current.accentColor = color;
+        Settings.applyAccentColor(color);
         Settings.save();
         
         // Update color picker and presets
-        document.getElementById('materialYouColorPicker').value = color;
+        document.getElementById('accentColorPicker').value = color;
         document.querySelectorAll('.color-preset').forEach(el => {
             el.classList.toggle('active', el.style.background === color);
         });
     },
     
-    applyMaterialYouColors: (seedColor) => {
-        const palette = HCTColorGenerator.generatePalette(seedColor);
+    applyAccentColor: (hexColor) => {
         const root = document.documentElement;
+        const theme = Settings.current.theme;
         
-        root.style.setProperty('--bg-color', palette.neutral[98]);
-        root.style.setProperty('--surface-color', palette.neutral[98]);
-        root.style.setProperty('--surface-container', palette.neutral[90]);
-        root.style.setProperty('--surface-island', palette.neutral[100]);
-        root.style.setProperty('--text-color', palette.neutral[10]);
-        root.style.setProperty('--text-subtle', palette.neutral[40]);
-        root.style.setProperty('--primary-color', palette.primary[40]);
-        root.style.setProperty('--on-primary', palette.primary[100]);
-        root.style.setProperty('--primary-container', palette.primary[90]);
-        root.style.setProperty('--on-primary-container', palette.primary[10]);
-        root.style.setProperty('--surface-variant', palette.neutralVariant[80]);
-        root.style.setProperty('--selection-overlay', palette.primary[90]);
+        // Generate lighter/darker variants
+        const rgb = Settings.hexToRgb(hexColor);
+        const hsl = Settings.rgbToHsl(rgb.r, rgb.g, rgb.b);
+        
+        // For light themes, use the color as-is for primary
+        // For dark themes, lighten the color
+        let primaryColor, onPrimary, primaryContainer, onPrimaryContainer;
+        
+        if(theme === 'light') {
+            primaryColor = hexColor;
+            onPrimary = Settings.getContrastColor(hexColor);
+            primaryContainer = Settings.lightenColor(hexColor, 0.85);
+            onPrimaryContainer = Settings.darkenColor(hexColor, 0.2);
+        } else if(theme === 'dark') {
+            primaryColor = Settings.lightenColor(hexColor, 0.2);
+            onPrimary = Settings.darkenColor(hexColor, 0.4);
+            primaryContainer = Settings.darkenColor(hexColor, 0.3);
+            onPrimaryContainer = Settings.lightenColor(hexColor, 0.15);
+        } else if(theme === 'oled') {
+            primaryColor = Settings.lightenColor(hexColor, 0.3);
+            onPrimary = '#000000';
+            primaryContainer = Settings.darkenColor(hexColor, 0.2);
+            onPrimaryContainer = Settings.lightenColor(hexColor, 0.2);
+        }
+        
+        root.style.setProperty('--primary-color', primaryColor);
+        root.style.setProperty('--on-primary', onPrimary);
+        root.style.setProperty('--primary-container', primaryContainer);
+        root.style.setProperty('--on-primary-container', onPrimaryContainer);
         
         // Update wave primary SVG
-        const wavePrimary = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='6' viewBox='0 0 20 6'%3E%3Cpath d='M0 3 Q5 0 10 3 T20 3' fill='none' stroke='${encodeURIComponent(palette.primary[40])}' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")`;
+        const wavePrimary = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='6' viewBox='0 0 20 6'%3E%3Cpath d='M0 3 Q5 0 10 3 T20 3' fill='none' stroke='${encodeURIComponent(primaryColor)}' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")`;
         root.style.setProperty('--wave-primary', wavePrimary);
+    },
+    
+    // Color utility functions
+    hexToRgb: (hex) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 0, b: 0 };
+    },
+    
+    rgbToHsl: (r, g, b) => {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        
+        if(max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch(max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+            }
+        }
+        return { h, s, l };
+    },
+    
+    lightenColor: (hex, amount) => {
+        const rgb = Settings.hexToRgb(hex);
+        const r = Math.min(255, Math.round(rgb.r + (255 - rgb.r) * amount));
+        const g = Math.min(255, Math.round(rgb.g + (255 - rgb.g) * amount));
+        const b = Math.min(255, Math.round(rgb.b + (255 - rgb.b) * amount));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    },
+    
+    darkenColor: (hex, amount) => {
+        const rgb = Settings.hexToRgb(hex);
+        const r = Math.max(0, Math.round(rgb.r * (1 - amount)));
+        const g = Math.max(0, Math.round(rgb.g * (1 - amount)));
+        const b = Math.max(0, Math.round(rgb.b * (1 - amount)));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    },
+    
+    getContrastColor: (hex) => {
+        const rgb = Settings.hexToRgb(hex);
+        const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+        return luminance > 0.5 ? '#000000' : '#ffffff';
     },
     
     // Reset to defaults
@@ -356,7 +419,7 @@ const Settings = {
         Settings.applyFontSize(Settings.current.fontSize);
         Settings.applyLineHeight(Settings.current.lineHeight);
         Settings.applyTheme(Settings.current.theme);
-        document.getElementById('materialYouColorPicker').value = Settings.current.materialYouColor;
+        document.getElementById('accentColorPicker').value = Settings.current.accentColor;
         
         document.getElementById('settingsModal').classList.add('open');
     },
@@ -364,171 +427,6 @@ const Settings = {
     closeModal: (e) => {
         if(e && e.target.id !== 'settingsModal') return;
         document.getElementById('settingsModal').classList.remove('open');
-    }
-};
-
-// --- HCT COLOR GENERATOR (Material You) ---
-const HCTColorGenerator = {
-    // Generate full palette from seed color
-    generatePalette: (hexSeed) => {
-        const hct = HCTColorGenerator.hexToHCT(hexSeed);
-        
-        return {
-            primary: HCTColorGenerator.generateTonalPalette(hct.hue, Math.max(hct.chroma, 48)),
-            secondary: HCTColorGenerator.generateTonalPalette(hct.hue, hct.chroma * 0.3),
-            tertiary: HCTColorGenerator.generateTonalPalette((hct.hue + 60) % 360, Math.max(hct.chroma * 0.6, 24)),
-            neutral: HCTColorGenerator.generateTonalPalette(hct.hue, hct.chroma * 0.1),
-            neutralVariant: HCTColorGenerator.generateTonalPalette(hct.hue, hct.chroma * 0.2)
-        };
-    },
-    
-    // Generate tonal palette (light to dark)
-    generateTonalPalette: (hue, chroma) => {
-        const tones = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 98, 100];
-        const palette = {};
-        
-        tones.forEach(tone => {
-            palette[tone] = HCTColorGenerator.hctToHex(hue, chroma, tone);
-        });
-        
-        return palette;
-    },
-    
-    // Convert hex to HCT
-    hexToHCT: (hex) => {
-        const rgb = HCTColorGenerator.hexToRGB(hex);
-        const xyz = HCTColorGenerator.rgbToXYZ(rgb);
-        const cam16 = HCTColorGenerator.xyzToCAM16(xyz);
-        
-        return {
-            hue: cam16.hue,
-            chroma: cam16.chroma,
-            tone: HCTColorGenerator.xyzToTone(xyz)
-        };
-    },
-    
-    // Convert HCT to hex
-    hctToHex: (hue, chroma, tone) => {
-        // Find the color with the target tone
-        const xyz = HCTColorGenerator.solveToXYZ(hue, chroma, tone);
-        const rgb = HCTColorGenerator.xyzToRGB(xyz);
-        return HCTColorGenerator.rgbToHex(rgb);
-    },
-    
-    // Hex to RGB
-    hexToRGB: (hex) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : { r: 0, g: 0, b: 0 };
-    },
-    
-    // RGB to hex
-    rgbToHex: (rgb) => {
-        const toHex = (c) => {
-            const clamped = Math.max(0, Math.min(255, Math.round(c)));
-            const hex = clamped.toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
-        };
-        return '#' + toHex(rgb.r) + toHex(rgb.g) + toHex(rgb.b);
-    },
-    
-    // RGB to XYZ (D65 illuminant)
-    rgbToXYZ: (rgb) => {
-        const linearize = (c) => {
-            c = c / 255;
-            return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-        };
-        
-        const r = linearize(rgb.r);
-        const g = linearize(rgb.g);
-        const b = linearize(rgb.b);
-        
-        return {
-            x: (r * 0.4124564 + g * 0.3575761 + b * 0.1804375) * 100,
-            y: (r * 0.2126729 + g * 0.7151522 + b * 0.0721750) * 100,
-            z: (r * 0.0193339 + g * 0.1191920 + b * 0.9503041) * 100
-        };
-    },
-    
-    // XYZ to RGB
-    xyzToRGB: (xyz) => {
-        const x = xyz.x / 100;
-        const y = xyz.y / 100;
-        const z = xyz.z / 100;
-        
-        const delinearize = (c) => {
-            c = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1/2.4) - 0.055;
-            return Math.max(0, Math.min(255, c * 255));
-        };
-        
-        return {
-            r: delinearize(x * 3.2404542 + y * -1.5371385 + z * -0.4985314),
-            g: delinearize(x * -0.9692660 + y * 1.8760108 + z * 0.0415560),
-            b: delinearize(x * 0.0556434 + y * -0.2040259 + z * 1.0572252)
-        };
-    },
-    
-    // XYZ to CAM16 (simplified)
-    xyzToCAM16: (xyz) => {
-        // Viewing conditions for standard environment
-        const whitePoint = { x: 95.047, y: 100.0, z: 108.883 };
-        const surround = 2.0; // Average surround
-        const adaptingLuminance = 64 / Math.PI;
-        const backgroundLuminance = 20;
-        
-        // Calculate luminance
-        const yw = xyz.y / whitePoint.y;
-        
-        // Calculate cone responses
-        const rC = (xyz.x * 1.86206786 - xyz.y * 1.01125463 + xyz.z * 0.14918677) / 100;
-        const gC = (xyz.x * 0.38752654 + xyz.y * 0.62144744 - xyz.z * 0.00897398) / 100;
-        const bC = (xyz.x * -0.01584150 - xyz.y * 0.03412294 + xyz.z * 1.0572252) / 100;
-        
-        // Calculate hue
-        const a = rC - 12 * gC / 11 + bC / 11;
-        const b = (rC + gC - 2 * bC) / 9;
-        const hueRadians = Math.atan2(b, a);
-        const hue = (hueRadians * 180 / Math.PI + 360) % 360;
-        
-        // Calculate chroma (simplified)
-        const chroma = Math.sqrt(a * a + b * b) * 1.5;
-        
-        return { hue, chroma };
-    },
-    
-    // XYZ to L* (tone)
-    xyzToTone: (xyz) => {
-        const y = xyz.y / 100;
-        const f = y > 0.008856 ? Math.pow(y, 1/3) : (903.3 * y + 16) / 116;
-        return 116 * f - 16;
-    },
-    
-    // Solve for XYZ given HCT (iterative approach)
-    solveToXYZ: (hue, chroma, tone) => {
-        // Convert hue to radians
-        const hueRad = hue * Math.PI / 180;
-        
-        // Estimate initial chroma
-        const j = tone;
-        const q = (4 / 100) * j * (1 + (100 - j) / 100);
-        const alpha = chroma / Math.sqrt(q);
-        
-        // Calculate a and b
-        const a = alpha * Math.cos(hueRad);
-        const b = alpha * Math.sin(hueRad);
-        
-        // Convert back to XYZ
-        const yFromTone = (tone + 16) / 116;
-        const y = yFromTone > 0.206897 ? yFromTone * yFromTone * yFromTone : 0.128419 * yFromTone - 0.0177139;
-        
-        // Approximate x and z from a and b
-        const x = y * (1 + a / 100);
-        const z = y * (1 - b / 100);
-        
-        return { x: x * 100, y: y * 100, z: z * 100 };
     }
 };
 
@@ -800,10 +698,10 @@ const Reader = {
                 
                 // 1. Build Token List (Objects) not String
                 let tokens = [];
-                const parts = vText.split(/(\[\[[HG]\d+\]\])/);
+                const parts = vText.split(/(\[\[[HG]\d+]\])/);
 
                 parts.forEach(p => {
-                    if (p.match(/^\[\[[HG]\d+\]\]$/)) {
+                    if (p.match(/^\[\[[HG]\d+]\]$/)) {
                         const code = p.match(/[HG]\d+/)[0];
                         // Attach to previous word token
                         for (let i = tokens.length - 1; i >= 0; i--) {
@@ -904,7 +802,7 @@ const Reader = {
     },
     getDefinition: async () => {
         let code = null;
-        Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code=el.dataset.code; });
+        Reader.selectionIds.forEach(id => { const el = document.getElementById(id); if(el.dataset.code) code = el.dataset.code; });
         if(code) {
             const lexPath = `lexicon/${code}.md`;
             const defText = await AppAPI.readFile(lexPath);
@@ -1042,7 +940,8 @@ const ReaderAudio = {
     },
     updateScrubber: () => {
         if (ReaderAudio.totalDuration === 0) return;
-        let prevTime = 0; for(let i=0; i<ReaderAudio.currentTrack; i++) prevTime += ReaderAudio.partDurations[i];
+        let prevTime = 0; 
+        for(let i=0; i<ReaderAudio.currentTrack; i++) prevTime += ReaderAudio.partDurations[i];
         const cur = prevTime + ReaderAudio.player.currentTime;
         const pct = (cur / ReaderAudio.totalDuration) * 100;
         document.getElementById('scrubber').value = pct;
@@ -1075,97 +974,82 @@ const ReaderAudio = {
 const ReadingPlans = {
     availablePlans: [],
     loadedPlans: {},
-    subscribedPlans: [],
-    currentViewDay: {},
     expandedDays: new Set(),
     
     // Initialize - load subscribed plans from localStorage
-    init: () => {
+    init: function() {
         const raw = AppAPI.getGlobal("ReadingPlansSubscribed");
-        if(raw) {
-            try { ReadingPlans.subscribedPlans = JSON.parse(raw); }
-            catch(e) { ReadingPlans.subscribedPlans = []; }
+        if (raw) {
+            try { this.subscribedPlans = JSON.parse(raw); }
+            catch (e) { this.subscribedPlans = []; }
         }
     },
     
     // Load available plans index
-    loadPlansIndex: async () => {
+    loadPlansIndex: async function() {
         try {
             const res = await fetch('plans/index.json');
-            if(!res.ok) throw new Error();
-            ReadingPlans.availablePlans = await res.json();
-            return ReadingPlans.availablePlans;
-        } catch(e) {
+            if (!res.ok) throw new Error();
+            this.availablePlans = await res.json();
+            return this.availablePlans;
+        } catch (e) {
             console.error('Failed to load plans index', e);
             return [];
         }
     },
     
     // Load specific plan data
-    loadPlan: async (planId) => {
-        if(ReadingPlans.loadedPlans[planId]) return ReadingPlans.loadedPlans[planId];
+    loadPlan: async function(planId) {
+        if (this.loadedPlans[planId]) return this.loadedPlans[planId];
         try {
-            const res = await fetch(`plans/${planId}.json`);
-            if(!res.ok) throw new Error();
+            const res = await fetch('plans/' + planId + '.json');
+            if (!res.ok) throw new Error();
             const plan = await res.json();
-            ReadingPlans.loadedPlans[planId] = plan;
+            this.loadedPlans[planId] = plan;
             return plan;
-        } catch(e) {
+        } catch (e) {
             console.error('Failed to load plan:', planId, e);
             return null;
         }
     },
     
     // Subscribe to a plan
-    subscribe: (planId) => {
-        if(ReadingPlans.subscribedPlans.find(p => p.planId === planId)) return;
+    subscribe: function(planId) {
+        if (this.subscribedPlans.find(function(p) { return p.planId === planId; })) return;
         const today = new Date().toISOString().split('T')[0];
-        ReadingPlans.subscribedPlans.push({
+        this.subscribedPlans.push({
             planId: planId,
             startDate: today,
-            completedDays: [],
-            lastViewedDay: 1
+            completedDays: []
         });
-        ReadingPlans.saveSubscriptions();
+        this.saveSubscriptions();
     },
     
     // Unsubscribe from a plan
-    unsubscribe: (planId) => {
-        ReadingPlans.subscribedPlans = ReadingPlans.subscribedPlans.filter(p => p.planId !== planId);
-        ReadingPlans.saveSubscriptions();
+    unsubscribe: function(planId) {
+        this.subscribedPlans = this.subscribedPlans.filter(function(p) { return p.planId !== planId; });
+        this.saveSubscriptions();
     },
     
     // Save subscriptions to localStorage
-    saveSubscriptions: () => {
-        AppAPI.setGlobal("ReadingPlansSubscribed", JSON.stringify(ReadingPlans.subscribedPlans));
+    saveSubscriptions: function() {
+        AppAPI.setGlobal("ReadingPlansSubscribed", JSON.stringify(this.subscribedPlans));
     },
     
     // Check if subscribed to a plan
-    isSubscribed: (planId) => {
-        return !!ReadingPlans.subscribedPlans.find(p => p.planId === planId);
+    isSubscribed: function(planId) {
+        return !!this.subscribedPlans.find(function(p) { return p.planId === planId; });
     },
     
     // Get progress for a plan
-    getPlanProgress: (planId) => {
-        return ReadingPlans.subscribedPlans.find(p => p.planId === planId);
+    getPlanProgress: function(planId) {
+        return this.subscribedPlans.find(function(p) { return p.planId === planId; });
     },
     
     // Calculate current day for a plan
-    getCurrentDay: (planId, planData) => {
-        const progress = ReadingPlans.getPlanProgress(planId);
-        if(!progress) return 1;
-        
-        // Calendar-based plan
-        if(planData.startMode === 'calendar' && planData.startDate) {
-            const today = new Date();
-            const [month, day] = planData.startDate.split('-').map(Number);
-            let startDate = new Date(today.getFullYear(), month - 1, day);
-            if(startDate > today) startDate = new Date(today.getFullYear() - 1, month - 1, day);
-            const diffDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
-            return Math.max(1, Math.min(diffDays, planData.totalDays));
-        }
-        
-        // Subscription-based plan
+    getCurrentDay: function(planId, planData) {
+        const progress = this.getPlanProgress(planId);
+        if (!progress) return 1;
         const startDate = new Date(progress.startDate);
         const today = new Date();
         const diffDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
@@ -1173,66 +1057,68 @@ const ReadingPlans = {
     },
     
     // Get reading for a specific day
-    getDayReading: (planId, dayNum) => {
-        const plan = ReadingPlans.loadedPlans[planId];
-        if(!plan) return null;
-        return plan.readings.find(r => r.day === dayNum);
+    getDayReading: function(planId, dayNum) {
+        const plan = this.loadedPlans[planId];
+        if (!plan) return null;
+        return plan.readings.find(function(r) { return r.day === dayNum; });
+    },
+    
+    // Check if a day is complete
+    isComplete: function(planId, dayNum) {
+        const progress = this.getPlanProgress(planId);
+        return progress && progress.completedDays.includes(dayNum);
     },
     
     // Mark a day as complete
-    markComplete: (planId, dayNum) => {
-        const progress = ReadingPlans.getPlanProgress(planId);
-        if(!progress) return;
-        if(!progress.completedDays.includes(dayNum)) {
+    markComplete: function(planId, dayNum) {
+        const progress = this.getPlanProgress(planId);
+        if (!progress) return;
+        if (!progress.completedDays.includes(dayNum)) {
             progress.completedDays.push(dayNum);
-            ReadingPlans.saveSubscriptions();
+            this.saveSubscriptions();
         }
     },
     
     // Remove completion mark
-    unmarkComplete: (planId, dayNum) => {
-        const progress = ReadingPlans.getPlanProgress(planId);
-        if(!progress) return;
-        progress.completedDays = progress.completedDays.filter(d => d !== dayNum);
-        ReadingPlans.saveSubscriptions();
-    },
-    
-    // Check if a day is complete
-    isComplete: (planId, dayNum) => {
-        const progress = ReadingPlans.getPlanProgress(planId);
-        return progress && progress.completedDays.includes(dayNum);
+    unmarkComplete: function(planId, dayNum) {
+        const progress = this.getPlanProgress(planId);
+        if (!progress) return;
+        progress.completedDays = progress.completedDays.filter(function(d) { return d !== dayNum; });
+        this.saveSubscriptions();
     },
     
     // Calculate completion percentage
-    getCompletionPercentage: (planId, totalDays) => {
-        const progress = ReadingPlans.getPlanProgress(planId);
-        if(!progress) return 0;
+    getCompletionPercentage: function(planId, totalDays) {
+        const progress = this.getPlanProgress(planId);
+        if (!progress) return 0;
         return Math.round((progress.completedDays.length / totalDays) * 100);
     },
     
     // Navigate to a reading reference
-    navigateToReading: (reference) => {
+    navigateToReading: function(reference) {
         const match = reference.match(/^(.+?)\s+(\d+)$/);
-        if(!match) return;
+        if (!match) return;
         const book = match[1];
         const chapter = match[2];
-        const name = `${book} ${chapter}`;
-        const path = `bibles/BSB/BER-${book}/${name}.md`;
+        const name = book + ' ' + chapter;
+        const path = 'bibles/BSB/BER-' + book + '/' + name + '.md';
         Reader.load(path, name);
     },
     
     // UI: Show Plans Dashboard
-    showDashboard: async (skipRouteUpdate = false) => {
+    showDashboard: async function(skipRouteUpdate) {
+        const self = this;
+        
         document.getElementById('view-selector').classList.add('hidden');
         document.getElementById('view-reader').classList.add('hidden');
+        document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('view-plans').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "Reading Plans";
         document.getElementById('btnBack').classList.remove('hidden');
         document.getElementById('btnBack').onclick = App.navBack;
         document.getElementById('btnHistory').classList.add('hidden');
         
-        // Update URL if not called from router
-        if(!skipRouteUpdate) {
+        if (!skipRouteUpdate) {
             Router.navigate('/plans');
         }
         
@@ -1241,43 +1127,43 @@ const ReadingPlans = {
         loader.classList.remove('hidden');
         list.innerHTML = '';
         
-        await ReadingPlans.loadPlansIndex();
+        await this.loadPlansIndex();
         
-        for(const planMeta of ReadingPlans.availablePlans) {
-            const plan = await ReadingPlans.loadPlan(planMeta.id);
-            if(!plan) continue;
+        for (let i = 0; i < this.availablePlans.length; i++) {
+            const planMeta = this.availablePlans[i];
+            const plan = await this.loadPlan(planMeta.id);
+            if (!plan) continue;
             
-            const isSubscribed = ReadingPlans.isSubscribed(plan.id);
-            const pct = ReadingPlans.getCompletionPercentage(plan.id, plan.totalDays);
-            const currentDay = ReadingPlans.getCurrentDay(plan.id, plan);
+            const isSubscribed = this.isSubscribed(plan.id);
+            const pct = this.getCompletionPercentage(plan.id, plan.totalDays);
+            const currentDay = this.getCurrentDay(plan.id, plan);
             
             const card = document.createElement('div');
             card.className = 'plan-card' + (isSubscribed ? ' subscribed' : '');
-            card.innerHTML = `
-                <div class="plan-header" onclick="ReadingPlans.showPreview('${plan.id}')">
-                    <span class="material-icons-round plan-icon">${plan.icon || 'menu_book'}</span>
-                    <div class="plan-info">
-                        <div class="plan-name">${plan.name}</div>
-                        <div class="plan-desc">${plan.description}</div>
-                    </div>
-                </div>
-                ${isSubscribed ? `
-                    <div class="plan-progress">
-                        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-                        <div class="progress-text">Day ${currentDay} of ${plan.totalDays} • ${pct}% complete</div>
-                    </div>
-                    <div class="plan-actions">
-                        <button class="btn-fill" onclick="ReadingPlans.showPlanGrid('${plan.id}')">Open Plan</button>
-                        <button class="btn-text" onclick="event.stopPropagation(); ReadingPlans.unsubscribe('${plan.id}'); ReadingPlans.showDashboard();">Unsubscribe</button>
-                    </div>
-                ` : `
-                    <div class="plan-meta">${plan.totalDays} days • Tap to preview</div>
-                    <div class="plan-actions">
-                        <button class="btn-fill" onclick="event.stopPropagation(); ReadingPlans.subscribe('${plan.id}'); ReadingPlans.showPlanGrid('${plan.id}');">Subscribe</button>
-                        <button class="btn-text" onclick="ReadingPlans.showPreview('${plan.id}')">Preview</button>
-                    </div>
-                `}
-            `;
+            card.innerHTML = 
+                '<div class="plan-header" onclick="ReadingPlans.showPreview(\'' + plan.id + '\')">' +
+                    '<span class="material-icons-round plan-icon">' + (plan.icon || 'menu_book') + '</span>' +
+                    '<div class="plan-info">' +
+                        '<div class="plan-name">' + plan.name + '</div>' +
+                        '<div class="plan-desc">' + plan.description + '</div>' +
+                    '</div>' +
+                '</div>' +
+                (isSubscribed ? 
+                    '<div class="plan-progress">' +
+                        '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
+                        '<div class="progress-text">Day ' + currentDay + ' of ' + plan.totalDays + ' • ' + pct + '% complete</div>' +
+                    '</div>' +
+                    '<div class="plan-actions">' +
+                        '<button class="btn-fill" onclick="ReadingPlans.showPlanGrid(\'' + plan.id + '\')">Open Plan</button>' +
+                        '<button class="btn-text" onclick="event.stopPropagation(); ReadingPlans.unsubscribe(\'' + plan.id + '\'); ReadingPlans.showDashboard();">Unsubscribe</button>' +
+                    '</div>'
+                : 
+                    '<div class="plan-meta">' + plan.totalDays + ' days • Tap to preview</div>' +
+                    '<div class="plan-actions">' +
+                        '<button class="btn-fill" onclick="event.stopPropagation(); ReadingPlans.subscribe(\'' + plan.id + '\'); ReadingPlans.showPlanGrid(\'' + plan.id + '\');">Subscribe</button>' +
+                        '<button class="btn-text" onclick="ReadingPlans.showPreview(\'' + plan.id + '\')">Preview</button>' +
+                    '</div>'
+                );
             list.appendChild(card);
         }
         
@@ -1297,203 +1183,153 @@ const ReadingPlans = {
         Router.navigate('/');
     },
     
-    // UI: Show Plan Preview (before subscribing) - same as grid view
-    showPreview: (planId) => {
-        const plan = ReadingPlans.loadedPlans[planId];
-        if(!plan) return;
+    // UI: Show Plan Preview
+    showPreview: function(planId) {
+        const plan = this.loadedPlans[planId];
+        if (!plan) return;
         
-        ReadingPlans.expandedDays.clear();
+        this.expandedDays.clear();
         
         document.getElementById('view-plans').classList.add('hidden');
-        document.getElementById('view-plans-preview').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = plan.name;
-        document.getElementById('btnBack').onclick = () => ReadingPlans.showDashboard();
+        document.getElementById('btnBack').onclick = function() { ReadingPlans.showDashboard(); };
         
-        // Render day grid (same as subscribed view)
         const gridContainer = document.getElementById('planDayGrid');
         gridContainer.innerHTML = '';
         
-        plan.readings.forEach(reading => {
+        for (let i = 0; i < plan.readings.length; i++) {
+            const reading = plan.readings[i];
             const dayCard = document.createElement('div');
             dayCard.className = 'day-grid-card preview-mode';
-            dayCard.id = `day-card-${planId}-${reading.day}`;
+            dayCard.id = 'day-card-' + planId + '-' + reading.day;
             
-            dayCard.innerHTML = `
-                <div class="day-grid-header" onclick="ReadingPlans.toggleDayExpandPreview('${planId}', ${reading.day})">
-                    <span class="day-grid-num">${reading.day}</span>
-                </div>
-                <div class="day-grid-refs">
-                    ${reading.sections.map(s => `<span class="day-ref-chip">${s.reference}</span>`).join('')}
-                </div>
-            `;
+            let refsHtml = '';
+            for (let j = 0; j < reading.sections.length; j++) {
+                refsHtml += '<span class="day-ref-chip">' + reading.sections[j].reference + '</span>';
+            }
+            
+            dayCard.innerHTML = 
+                '<div class="day-grid-header" onclick="ReadingPlans.toggleDayExpand(\'' + planId + '\', ' + reading.day + ')">' +
+                    '<span class="day-grid-num">' + reading.day + '</span>' +
+                '</div>' +
+                '<div class="day-grid-refs">' + refsHtml + '</div>';
             
             gridContainer.appendChild(dayCard);
-        });
+        }
         
-        // Add subscribe button at the bottom
         const subscribeFooter = document.createElement('div');
         subscribeFooter.className = 'preview-footer';
-        subscribeFooter.innerHTML = `
-            <div class="preview-footer-info">
-                <span class="material-icons-round">info</span>
-                <span>${plan.totalDays} days • Preview Mode</span>
-            </div>
-            <button class="btn-fill" onclick="ReadingPlans.subscribe('${planId}'); ReadingPlans.showPlanGrid('${planId}');">Subscribe to Plan</button>
-        `;
+        subscribeFooter.innerHTML = 
+            '<div class="preview-footer-info">' +
+                '<span class="material-icons-round">info</span>' +
+                '<span>' + plan.totalDays + ' days • Preview Mode</span>' +
+            '</div>' +
+            '<button class="btn-fill" onclick="ReadingPlans.subscribe(\'' + planId + '\'); ReadingPlans.showPlanGrid(\'' + planId + '\');">Subscribe to Plan</button>';
         gridContainer.appendChild(subscribeFooter);
     },
     
-    // Toggle day expansion for preview mode (no completion tracking)
-    toggleDayExpandPreview: (planId, dayNum) => {
-        const card = document.getElementById(`day-card-${planId}-${dayNum}`);
-        if(!card) return;
+    // UI: Show Plan Grid
+    showPlanGrid: function(planId, skipRouteUpdate) {
+        const plan = this.loadedPlans[planId];
+        if (!plan) return;
         
-        const isExpanded = ReadingPlans.expandedDays.has(dayNum);
-        
-        if(isExpanded) {
-            ReadingPlans.expandedDays.delete(dayNum);
-            card.classList.remove('expanded');
-            const expandedContent = card.querySelector('.day-expanded-content');
-            if(expandedContent) expandedContent.remove();
-        } else {
-            ReadingPlans.expandedDays.add(dayNum);
-            card.classList.add('expanded');
-            const reading = ReadingPlans.getDayReading(planId, dayNum);
-            
-            const expandedDiv = document.createElement('div');
-            expandedDiv.className = 'day-expanded-content';
-            expandedDiv.innerHTML = `
-                ${reading.sections.map(s => `
-                    <div class="day-section-row">
-                        <span class="day-section-label">${s.label}</span>
-                        <span class="day-section-ref">${s.reference}</span>
-                        <button class="btn-icon-small" onclick="ReadingPlans.navigateToReading('${s.reference}')">
-                            <span class="material-icons-round">open_in_new</span>
-                        </button>
-                    </div>
-                `).join('')}
-            `;
-            card.appendChild(expandedDiv);
-        }
-    },
-    
-    // Toggle day complete - used in the grid view to mark a day complete
-    toggleDayCompleteInternal: (planId, dayNum) => {
-        const isComplete = ReadingPlans.isComplete(planId, dayNum);
-        if(isComplete) {
-            ReadingPlans.unmarkComplete(planId, dayNum);
-        } else {
-            ReadingPlans.markComplete(planId, dayNum);
-        }
-        // Refresh the grid
-        ReadingPlans.showPlanGrid(planId);
-    },
-    
-    // UI: Show Plan Grid (compact view of all days)
-    showPlanGrid: (planId, skipRouteUpdate = false) => {
-        const plan = ReadingPlans.loadedPlans[planId];
-        if(!plan) return;
-        
-        ReadingPlans.expandedDays.clear();
+        this.expandedDays.clear();
         
         document.getElementById('view-plans').classList.add('hidden');
-        document.getElementById('view-plans-preview').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = plan.name;
         document.getElementById('btnBack').onclick = App.navBack;
         
-        // Update URL if not called from router
-        if(!skipRouteUpdate) {
-            Router.navigate(`/plans/${planId}`);
+        if (!skipRouteUpdate) {
+            Router.navigate('/plans/' + planId);
         }
         
-        const currentDay = ReadingPlans.getCurrentDay(planId, plan);
-        
-        // Render day grid
+        const currentDay = this.getCurrentDay(planId, plan);
         const gridContainer = document.getElementById('planDayGrid');
         gridContainer.innerHTML = '';
         
-        plan.readings.forEach(reading => {
-            const isComplete = ReadingPlans.isComplete(planId, reading.day);
+        for (let i = 0; i < plan.readings.length; i++) {
+            const reading = plan.readings[i];
+            const isComplete = this.isComplete(planId, reading.day);
             const isCurrent = reading.day === currentDay;
             
             const dayCard = document.createElement('div');
             dayCard.className = 'day-grid-card' + (isComplete ? ' completed' : '') + (isCurrent ? ' current' : '');
-            dayCard.id = `day-card-${planId}-${reading.day}`;
+            dayCard.id = 'day-card-' + planId + '-' + reading.day;
             
             // Compact view
-            dayCard.innerHTML = `
-                <div class="day-grid-header" onclick="ReadingPlans.toggleDayExpand('${planId}', ${reading.day})">
-                    <span class="day-grid-num">${reading.day}</span>
-                    <span class="day-grid-status">${isComplete ? '<span class="material-icons-round">check_circle</span>' : ''}</span>
-                </div>
-                <div class="day-grid-refs">
-                    ${reading.sections.map(s => `<span class="day-ref-chip">${s.reference}</span>`).join('')}
-                </div>
-            `;
+            dayCard.innerHTML = 
+                '<div class="day-grid-header" onclick="ReadingPlans.toggleDayExpand(\'' + planId + '\', ' + reading.day + ')">' +
+                    '<span class="day-grid-num">' + reading.day + '</span>' +
+                    '<span class="day-grid-status">' + (isComplete ? '<span class="material-icons-round">check_circle</span>' : '') + '</span>' +
+                '</div>' +
+                '<div class="day-grid-refs">' +
+                    reading.sections.map(s => '<span class="day-ref-chip">' + s.reference + '</span>').join('')
+                '</div>';
             
             gridContainer.appendChild(dayCard);
-        });
+        }
         
-        // Scroll to current day
-        setTimeout(() => {
-            const currentCard = document.getElementById(`day-card-${planId}-${currentDay}`);
-            if(currentCard) currentCard.scrollIntoView({behavior: 'smooth', block: 'center'});
+        setTimeout(function() {
+            const currentCard = document.getElementById('day-card-' + planId + '-' + currentDay);
+            if (currentCard) currentCard.scrollIntoView({behavior: 'smooth', block: 'center'});
         }, 100);
     },
     
     // Toggle day expansion
-    toggleDayExpand: (planId, dayNum) => {
-        const card = document.getElementById(`day-card-${planId}-${dayNum}`);
-        if(!card) return;
+    toggleDayExpand: function(planId, dayNum) {
+        const card = document.getElementById('day-card-' + planId + '-' + dayNum);
+        if (!card) return;
         
-        const isExpanded = ReadingPlans.expandedDays.has(dayNum);
+        const isExpanded = this.expandedDays.has(dayNum);
         
-        if(isExpanded) {
-            ReadingPlans.expandedDays.delete(dayNum);
+        if (isExpanded) {
+            this.expandedDays.delete(dayNum);
             card.classList.remove('expanded');
             // Remove expanded content
             const expandedContent = card.querySelector('.day-expanded-content');
-            if(expandedContent) expandedContent.remove();
+            if (expandedContent) expandedContent.remove();
         } else {
-            ReadingPlans.expandedDays.add(dayNum);
+            this.expandedDays.add(dayNum);
             card.classList.add('expanded');
             // Add expanded content
-            const reading = ReadingPlans.getDayReading(planId, dayNum);
-            const isComplete = ReadingPlans.isComplete(planId, dayNum);
+            const reading = this.getDayReading(planId, dayNum);
+            const isComplete = this.isComplete(planId, dayNum);
+            
+            let sectionsHtml = '';
+            for (let i = 0; i < reading.sections.length; i++) {
+                const s = reading.sections[i];
+                sectionsHtml += 
+                    '<div class="day-section-row">' +
+                        '<span class="day-section-label">' + s.label + '</span>' +
+                        '<span class="day-section-ref">' + s.reference + '</span>' +
+                        '<button class="btn-icon-small" onclick="ReadingPlans.navigateToReading(\'' + s.reference + '\')">' +
+                            '<span class="material-icons-round">open_in_new</span>' +
+                        '</button>' +
+                    '</div>';
+            }
             
             const expandedDiv = document.createElement('div');
             expandedDiv.className = 'day-expanded-content';
-            expandedDiv.innerHTML = `
-                ${reading.sections.map(s => `
-                    <div class="day-section-row">
-                        <span class="day-section-label">${s.label}</span>
-                        <span class="day-section-ref">${s.reference}</span>
-                        <button class="btn-icon-small" onclick="ReadingPlans.navigateToReading('${s.reference}')">
-                            <span class="material-icons-round">open_in_new</span>
-                        </button>
-                    </div>
-                `).join('')}
-                <button class="btn-fill day-complete-btn ${isComplete ? 'completed' : ''}" onclick="ReadingPlans.toggleDayComplete('${planId}', ${dayNum})">
-                    <span class="material-icons-round">${isComplete ? 'check_circle' : 'radio_button_unchecked'}</span>
-                    ${isComplete ? 'Completed' : 'Mark Complete'}
-                </button>
-            `;
+            expandedDiv.innerHTML = sectionsHtml + 
+                '<button class="btn-fill day-complete-btn ' + (isComplete ? 'completed' : '') + '" onclick="ReadingPlans.toggleDayComplete(\'' + planId + '\', ' + dayNum + ')">' +
+                    '<span class="material-icons-round">' + (isComplete ? 'check_circle' : 'radio_button_unchecked') + '</span>' +
+                    (isComplete ? 'Completed' : 'Mark Complete') +
+                '</button>';
             card.appendChild(expandedDiv);
         }
     },
     
     // Toggle day completion
-    toggleDayComplete: (planId, dayNum) => {
-        const isComplete = ReadingPlans.isComplete(planId, dayNum);
-        if(isComplete) {
-            ReadingPlans.unmarkComplete(planId, dayNum);
+    toggleDayComplete: function(planId, dayNum) {
+        const isComplete = this.isComplete(planId, dayNum);
+        if (isComplete) {
+            this.unmarkComplete(planId, dayNum);
         } else {
-            ReadingPlans.markComplete(planId, dayNum);
+            this.markComplete(planId, dayNum);
         }
-        // Refresh the grid
-        ReadingPlans.showPlanGrid(planId);
+        this.showPlanGrid(planId);
     }
 };
 
@@ -1521,3 +1357,6 @@ const ReaderScroll = {
 };
 
 window.onload = App.init;
+console.log('[DEBUG] app.js - Script finished loading');
+console.log('[DEBUG] Settings defined?', typeof Settings !== 'undefined');
+console.log('[DEBUG] Selector defined?', typeof Selector !== 'undefined');
