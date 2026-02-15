@@ -31,6 +31,7 @@
         <button class="nav-btn hidden" id="btnNextChap" onclick="Reader.navNext()"><span class="material-icons-round">chevron_right</span></button>
         <!-- Global -->
         <button class="icon-btn" onclick="Settings.openModal()"><span class="material-icons-round">settings</span></button>
+        <button class="icon-btn" onclick="App.toggleTheme()"><span class="material-icons-round" id="themeIcon">dark_mode</span></button>
     </div>
 </header>
 
@@ -259,13 +260,9 @@
                     <div class="theme-preview theme-preview-retro"></div>
                     <span class="theme-name">Retro</span>
                 </div>
-                <div class="theme-option" data-theme-option="materialYouLight" onclick="Settings.setTheme('materialYouLight')">
-                    <div class="theme-preview theme-preview-materialYou" id="materialYouLightPreview"></div>
-                    <span class="theme-name">You (Light)</span>
-                </div>
-                <div class="theme-option" data-theme-option="materialYouDark" onclick="Settings.setTheme('materialYouDark')">
-                    <div class="theme-preview theme-preview-materialYou-dark" id="materialYouDarkPreview"></div>
-                    <span class="theme-name">You (Dark)</span>
+                <div class="theme-option" data-theme-option="materialYou" onclick="Settings.setTheme('materialYou')">
+                    <div class="theme-preview theme-preview-materialYou"></div>
+                    <span class="theme-name">Material You</span>
                 </div>
             </div>
             
@@ -283,22 +280,6 @@
                         <div class="color-preset" style="background: #0b8043" onclick="Settings.setMaterialYouColor('#0b8043')"></div>
                         <div class="color-preset" style="background: #e8710a" onclick="Settings.setMaterialYouColor('#e8710a')"></div>
                         <div class="color-preset" style="background: #149da6" onclick="Settings.setMaterialYouColor('#149da6')"></div>
-                    </div>
-                </div>
-                
-                <!-- Color Palette Preview -->
-                <div class="color-palette-preview" id="colorPalettePreview">
-                    <div class="palette-row">
-                        <div class="palette-swatch" id="palettePrimary"></div>
-                        <div class="palette-swatch" id="paletteOnPrimary"></div>
-                        <div class="palette-swatch" id="palettePrimaryContainer"></div>
-                        <div class="palette-swatch" id="paletteOnPrimaryContainer"></div>
-                    </div>
-                    <div class="palette-labels">
-                        <span>P</span>
-                        <span>onP</span>
-                        <span>P Container</span>
-                        <span>onP Container</span>
                     </div>
                 </div>
             </div>
