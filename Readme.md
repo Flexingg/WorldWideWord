@@ -88,19 +88,21 @@ WordWideWeb offers extensive customization options for a personalized reading ex
 | **OLED Black** | Pure black background, ideal for AMOLED screens |
 | **Sepia** | Warm, paper-like tones for comfortable reading |
 | **Retro** | Vintage aesthetic with orange accents |
-| **Material You** | Dynamic colors generated from your chosen seed color |
+| **You (Light)** | Material You dynamic colors in light mode |
+| **You (Dark)** | Material You dynamic colors in dark mode |
 
-#### Material You Theme
+#### Material You Themes
 
-The Material You theme uses HCT (Hue, Chroma, Tone) color science to generate a complete color palette from a single seed color:
+The Material You themes use HCT (Hue, Chroma, Tone) color science to generate a complete color palette from a single seed color, following [Material Design 3 guidelines](https://m3.material.io/styles/color/system/overview):
 
 1. **Choose a seed color** using the color picker or select from 8 presets
-2. **Automatic palette generation** creates:
-   - Primary colors (for buttons, links, highlights)
-   - Secondary colors (for subtle accents)
-   - Tertiary colors (for complementary elements)
-   - Neutral colors (for backgrounds and text)
-3. **Tonal palettes** ensure proper contrast ratios for accessibility
+2. **Automatic palette generation** creates accessible color roles:
+   - **Primary** - For buttons, links, highlights
+   - **On Primary** - Text/icons on primary colors
+   - **Primary Container** - For containers and cards
+   - **On Primary Container** - Text/icons in containers
+3. **Light and Dark variants** - Both themes use the same seed color but generate appropriate tones for their mode
+4. **Accessible contrast** - Colors automatically meet WCAG contrast requirements
 
 All settings are automatically saved to your browser's localStorage and persist across sessions.
 
