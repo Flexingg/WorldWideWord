@@ -433,9 +433,73 @@ const Selector = {
         }
         
         const cleanQ = query.toLowerCase().replace(/[\\]/g, "").replace(/\[/g, "").replace(/\]/g, "");
-        let results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
+        const searchWords = cleanQ.split(/\s+/).filter(w => w.length > 0);
         
+        let results = [];
+        const index = Selector.searchIndex;
+        
+        if (searchWords.length === 1) {
+            // Single word: use simple search
+            results = index.filter(item => item.t.toLowerCase().includes(cleanQ));
+        } else {
+            // Multi-word: proximity search (current verse + next verse only)
+            for (let i = 0; i < index.length; i++) {
+                const verse = index[i];
+                const text = verse.t.toLowerCase();
+                
+                // Find positions of each word in current verse
+                const wordPositions = {};
+                searchWords.forEach(word => {
+                    const pos = text.indexOf(word);
+                    if (pos !== -1) {
+                        wordPositions[word] = pos;
+                    }
+                });
+                
+                // All words found in current verse
+                if (Object.keys(wordPositions).length === searchWords.length) {
+                    // Calculate word proximity (distance between first and last word)
+                    const positions = Object.values(wordPositions);
+                    const minPos = Math.min(...positions);
+                    const maxPos = Math.max(...positions);
+                    const wordDistance = maxPos - minPos;
+                    
+                    results.push({...verse, matchType: 'same-verse', wordDistance: wordDistance});
+                    continue;
+                }
+                
+                // Check if remaining words are in next verse (same chapter only)
+                const foundWords = Object.keys(wordPositions);
+                const remainingWords = searchWords.filter(w => !foundWords.includes(w));
+                if (remainingWords.length > 0 && i + 1 < index.length) {
+                    const nextVerse = index[i + 1];
+                    
+                    // Must be same chapter
+                    if (nextVerse.n === verse.n) {
+                        const nextText = nextVerse.t.toLowerCase();
+                        const allInNext = remainingWords.every(w => nextText.includes(w));
+                        
+                        if (allInNext) {
+                            results.push({...verse, matchType: 'proximity'});
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort results: same-verse first (by word proximity), then proximity matches
         results.sort((a, b) => {
+            // Primary: matchType (same-verse before proximity)
+            if (a.matchType !== b.matchType) {
+                return a.matchType === 'same-verse' ? -1 : 1;
+            }
+            
+            // For same-verse matches, sort by word distance (closer = higher rank)
+            if (a.matchType === 'same-verse' && a.wordDistance !== b.wordDistance) {
+                return (a.wordDistance || 0) - (b.wordDistance || 0);
+            }
+            
+            // Secondary: book order
             const lastSpaceA = a.n.lastIndexOf(' ');
             const bookA = a.n.substring(0, lastSpaceA);
             const chapA = parseInt(a.n.substring(lastSpaceA + 1));
@@ -460,9 +524,10 @@ const Selector = {
         results.forEach(item => {
             const el = document.createElement('div'); el.className = 'result-card';
             const badge = item.v ? `<span class="res-badge">Verse ${item.v}</span>` : "";
+            const proximityBadge = item.matchType === 'proximity' ? `<span class="res-badge proximity">v${item.v}+1</span>` : badge;
             const displaySnippet = item.t.replace(/\[\[[HG]\d+\]\]/g, "");
             
-            el.innerHTML = `<div class="res-title"><span>${item.n}</span>${badge}</div><div class="res-snippet">${displaySnippet || item.t}</div>`;
+            el.innerHTML = `<div class="res-title"><span>${item.n}</span>${proximityBadge}</div><div class="res-snippet">${displaySnippet || item.t}</div>`;
             el.onclick = () => Reader.load(item.p, item.n);
             list.appendChild(el);
         });

@@ -184,6 +184,7 @@ header.scrolled {
 .list-item { flex-direction: row; align-items: center; gap: 12px; }
 .res-title { font-weight: 700; color: var(--primary-color); font-size: 15px; display:flex; justify-content:space-between; font-family: 'Roboto', sans-serif; }
 .res-badge { font-size: 11px; background: var(--surface-variant); padding: 2px 8px; border-radius: 6px; }
+.res-badge.proximity { background: var(--primary-container); color: var(--on-primary-container); font-weight: 500; }
 .res-snippet { font-size: 14px; color: var(--text-subtle); margin-top:4px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* --- READER CONTENT --- */
