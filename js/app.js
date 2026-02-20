@@ -378,6 +378,7 @@ const Selector = {
         Selector.isSearch = forceOn ? true : !Selector.isSearch;
         const btn = document.getElementById('btnMode');
         const input = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('btnClearSearch');
         
         if (Selector.isSearch) {
             btn.classList.add('active');
@@ -388,6 +389,7 @@ const Selector = {
             
             if(initialQuery) {
                 input.value = initialQuery.replace(/[\[\]]/g, "");
+                clearBtn.classList.remove('hidden');
                 Selector.performSearch(initialQuery);
                 
                 if(!skipRouteUpdate) {
@@ -395,6 +397,7 @@ const Selector = {
                     Router.navigate(`/search/${encodedQuery}`);
                 }
             } else {
+                clearBtn.classList.add('hidden');
                 document.getElementById('searchList').innerHTML = '<div style="text-align:center;opacity:0.5;margin-top:20px">Type word and press Enter</div>';
                 setTimeout(() => input.focus(), 100);
             }
@@ -404,7 +407,40 @@ const Selector = {
     },
 
     handleInput: (val) => {
-        if(!Selector.isSearch) Selector.renderBooks(BOOKS.filter(b => b.n.toLowerCase().includes(val.toLowerCase())));
+        const clearBtn = document.getElementById('btnClearSearch');
+        
+        // Show/hide clear button
+        if (val.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+        
+        // If not in search mode, filter books
+        if(!Selector.isSearch) {
+            const filtered = BOOKS.filter(b => b.n.toLowerCase().includes(val.toLowerCase()));
+            
+            // If no books match and input is meaningful, auto-switch to word search
+            if (filtered.length === 0 && val.length >= 2) {
+                Selector.toggleSearchMode(true, val);
+            } else {
+                Selector.renderBooks(filtered);
+            }
+        }
+    },
+
+    clearSearch: () => {
+        const input = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('btnClearSearch');
+        input.value = "";
+        clearBtn.classList.add('hidden');
+        
+        if (Selector.isSearch) {
+            Selector.reset();
+        } else {
+            Selector.renderBooks(BOOKS);
+        }
+        input.focus();
     },
 
     handleSearch: (e) => {
@@ -539,6 +575,7 @@ const Selector = {
         document.getElementById('searchInput').value = "";
         document.getElementById('searchInput').placeholder = "Filter books...";
         document.getElementById('searchIcon').innerText = "filter_list";
+        document.getElementById('btnClearSearch').classList.add('hidden');
         
         document.getElementById('view-selector').classList.remove('hidden');
         document.getElementById('view-reader').classList.add('hidden');
@@ -699,9 +736,9 @@ const Reader = {
         ScrollProgress.reset();
         
         // Start tracking this reading session
-        const parts = name.split(' ');
+        const parts = name.split(" ");
         const chapter = parseInt(parts.pop());
-        const book = parts.join(' ');
+        const book = parts.join(" ");
         SessionTracker.startSession(book, chapter);
         
         if(!skipRouteUpdate) {

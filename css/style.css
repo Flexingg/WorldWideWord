@@ -149,6 +149,14 @@ header.scrolled {
     border: none; background: transparent; outline: none; 
     font-size: 16px; margin-left: 12px; width: 100%; color: inherit; padding: 0;
 }
+.clear-btn { 
+    background: none; border: none; padding: 4px; 
+    border-radius: 50%; cursor: pointer; 
+    color: var(--text-subtle); display: flex; align-items: center; justify-content: center; 
+    margin-left: 4px;
+}
+.clear-btn:active { background-color: var(--surface-variant); }
+.clear-btn .material-icons-round { font-size: 18px; }
 
 .mode-toggle { 
     background-color: var(--surface-container); height: 100%; width: 50px; 

@@ -50,6 +50,7 @@
                 <form onsubmit="Selector.handleSearch(event)">
                     <input type="text" id="searchInput" placeholder="Filter books..." onkeyup="Selector.handleInput(this.value)" autocomplete="off">
                 </form>
+                <button class="clear-btn hidden" id="btnClearSearch" onclick="Selector.clearSearch()"><span class="material-icons-round">close</span></button>
             </div>
             <button class="mode-toggle" id="btnMode" onclick="Selector.toggleSearchMode()">
                 <span class="material-icons-round">search</span>
