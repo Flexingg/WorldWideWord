@@ -715,9 +715,23 @@ const Reader = {
         const parts = Reader.currentName.split(" ");
         const num = parseInt(parts[parts.length-1]);
         const book = parts.slice(0, parts.length-1).join(" ");
-        const nextName = `${book} ${num+1}`;
-        const path = `bibles/BSB/BER-${book}/${nextName}.md`;
-        Reader.load(path, nextName);
+        
+        // Find current book info
+        const bookIndex = BOOKS.findIndex(b => b.n === book);
+        const bookInfo = BOOKS[bookIndex];
+        
+        // If at last chapter of current book, go to next book's chapter 1
+        if (bookInfo && num >= bookInfo.c && bookIndex < BOOKS.length - 1) {
+            const nextBook = BOOKS[bookIndex + 1];
+            const nextName = `${nextBook.n} 1`;
+            const path = `bibles/BSB/BER-${nextBook.n}/${nextName}.md`;
+            Reader.load(path, nextName);
+        } else {
+            // Same book, next chapter
+            const nextName = `${book} ${num+1}`;
+            const path = `bibles/BSB/BER-${book}/${nextName}.md`;
+            Reader.load(path, nextName);
+        }
     },
 
     navPrev: () => {
@@ -725,8 +739,18 @@ const Reader = {
         const num = parseInt(parts[parts.length-1]);
         const book = parts.slice(0, parts.length-1).join(" ");
         
-        // Don't navigate if at chapter 1
-        if (num <= 1) return;
+        // If at chapter 1, go to previous book's last chapter
+        if (num <= 1) {
+            const bookIndex = BOOKS.findIndex(b => b.n === book);
+            if (bookIndex > 0) {
+                const prevBook = BOOKS[bookIndex - 1];
+                const prevName = `${prevBook.n} ${prevBook.c}`;
+                const path = `bibles/BSB/BER-${prevBook.n}/${prevName}.md`;
+                Reader.load(path, prevName);
+            }
+            // If at first book's first chapter, do nothing
+            return;
+        }
         
         const prevName = `${book} ${num-1}`;
         const path = `bibles/BSB/BER-${book}/${prevName}.md`;
