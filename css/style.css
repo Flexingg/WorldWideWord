@@ -902,3 +902,269 @@ input[type=range].h-slider::-moz-range-thumb {
     color: var(--text-subtle);
     font-family: 'Roboto', sans-serif;
 }
+
+/* ==================== STATS PAGE STYLES ==================== */
+
+.stats-content {
+    padding: 0 16px 80px 16px;
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.stats-row-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.stat-card {
+    background: var(--surface-island);
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stat-card.streak-card {
+    background: linear-gradient(135deg, var(--primary-container), var(--surface-island));
+}
+
+.stat-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.stat-icon .material-icons-round {
+    font-size: 28px;
+    color: var(--primary-color);
+}
+
+.stat-icon.streak-active .material-icons-round {
+    animation: flame 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes flame {
+    from { transform: scale(1); }
+    to { transform: scale(1.1); }
+}
+
+.stat-value {
+    font-family: 'Roboto', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+.stat-sub {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    color: var(--text-subtle);
+    margin-top: 8px;
+    opacity: 0.8;
+}
+
+.stat-card-small {
+    background: var(--surface-island);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+}
+
+.stat-value-small {
+    font-family: 'Roboto', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.stat-label-small {
+    font-family: 'Roboto', sans-serif;
+    font-size: 10px;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+
+/* Chart Cards */
+.chart-card {
+    background: var(--surface-island);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.chart-title {
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 12px;
+}
+
+.chart-container {
+    height: 180px;
+    position: relative;
+}
+
+/* Coverage Card */
+.coverage-card {
+    background: var(--surface-island);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.coverage-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.coverage-header .material-icons-round {
+    color: var(--primary-color);
+}
+
+.coverage-pct {
+    margin-left: auto;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.coverage-bar {
+    height: 8px;
+    background: var(--surface-container);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.coverage-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+/* Book Progress Section */
+.book-progress-section {
+    margin-top: 16px;
+}
+
+.section-title {
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 12px;
+}
+
+.book-progress-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.book-progress-item {
+    background: var(--surface-island);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.book-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.book-progress-name {
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.book-progress-pct {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    color: var(--text-subtle);
+}
+
+.book-progress-bar {
+    height: 4px;
+    background: var(--surface-container);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.book-progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.book-progress-fill.completed {
+    background: var(--primary-color);
+}
+
+.book-progress-fill.in-progress {
+    background: var(--primary-color);
+    opacity: 0.7;
+}
+
+/* Stats Error State */
+.stats-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-subtle);
+}
+
+.stats-error .material-icons-round {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.stats-error p {
+    margin-bottom: 16px;
+}
+
+/* Responsive adjustments for stats */
+@media (max-width: 360px) {
+    .stats-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-row-3 {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-value {
+        font-size: 28px;
+    }
+}

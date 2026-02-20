@@ -12,7 +12,7 @@ BOOKS.forEach((b, i) => BOOK_ORDER[b.n] = i);
 // --- ROUTER (Hash-based for static hosting compatibility) ---
 const Router = {
     currentRoute: null,
-    isNavigating: false, // Flag to prevent recursive navigation
+    isNavigating: false,
     
     init: () => {
         window.addEventListener('hashchange', Router.onHashChange);
@@ -27,13 +27,11 @@ const Router = {
     },
     
     parseRoute: (hash) => {
-        // Remove leading # and /
         const path = hash.replace(/^#/, '').replace(/^\//, '');
         const parts = path.split('/').filter(p => p);
         
         if(parts.length === 0) return { type: 'home' };
         
-        // Decode URI components for book names with spaces
         if(parts[0] === 'book' && parts[1]) {
             return { type: 'book', book: decodeURIComponent(parts[1].replace(/_/g, ' ')) };
         }
@@ -54,11 +52,13 @@ const Router = {
         if(parts[0] === 'search' && parts[1]) {
             return { type: 'search', query: decodeURIComponent(parts[1].replace(/_/g, ' ')) };
         }
+        if(parts[0] === 'stats') {
+            return { type: 'stats' };
+        }
         
         return { type: 'home' };
     },
     
-    // Navigate to a route (updates URL hash)
     navigate: (path) => {
         if(Router.isNavigating) return;
         Router.isNavigating = true;
@@ -66,14 +66,12 @@ const Router = {
         setTimeout(() => { Router.isNavigating = false; }, 50);
     },
     
-    // Handle hash change event
     onHashChange: () => {
         if(Router.isNavigating) return;
         const route = Router.parseRoute(window.location.hash);
         Router.handleRoute(route);
     },
     
-    // Route handler - dispatches to appropriate view
     handleRoute: (route) => {
         Router.currentRoute = route;
         
@@ -103,17 +101,18 @@ const Router = {
             case 'search':
                 Selector.toggleSearchMode(true, route.query, true);
                 break;
+            case 'stats':
+                StatsUI.showStatsPage(true);
+                break;
             default:
                 Selector.reset(true);
         }
     },
     
-    // Get current URL for sharing
     getCurrentURL: () => {
         return window.location.href;
     },
     
-    // Build shareable URL for a chapter
     buildChapterURL: (book, chapter) => {
         const encodedBook = encodeURIComponent(book).replace(/%20/g, '_');
         return `${window.location.origin}${window.location.pathname}#/read/${encodedBook}/${chapter}`;
@@ -122,12 +121,21 @@ const Router = {
 
 // --- APP STATE ---
 const App = {
-    init: () => {
+    init: async () => {
         Settings.init();
         Selector.init();
         ReadingPlans.init();
         
-        // Initialize router (handles initial URL and hash changes)
+        // Initialize stats database and session tracking
+        try {
+            await StatsDB.init();
+            SessionTracker.initVisibilityTracking();
+            await SessionTracker.migrateOldHistory();
+            console.log('[DEBUG] Stats system initialized');
+        } catch (e) {
+            console.error('[DEBUG] Stats system init error:', e);
+        }
+        
         Router.init();
         
         const autoS = AppAPI.getGlobal("BibleAutoSearch");
@@ -138,14 +146,16 @@ const App = {
     },
     applyTheme: (t) => {
         document.documentElement.setAttribute('data-theme', t);
-        // Theme icon removed from header - theme is now changed via Settings modal
     },
     toggleTheme: () => {
-        // Open settings modal instead of cycling
         Settings.openModal();
     },
     navBack: () => {
-        // Use browser history for back navigation
+        // End any active reading session before navigating
+        if (SessionTracker.currentSession) {
+            SessionTracker.endSession();
+        }
+        
         if(window.location.hash && window.location.hash.length > 1) {
             window.history.back();
         } else {
@@ -153,24 +163,27 @@ const App = {
         }
     },
     goHome: () => {
+        // End any active reading session
+        if (SessionTracker.currentSession) {
+            SessionTracker.endSession();
+        }
+        
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
         document.getElementById('view-plans').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
+        document.getElementById('view-stats').classList.add('hidden');
         document.getElementById('btnBack').classList.add('hidden');
         document.getElementById('btnAudio').classList.add('hidden');
         document.getElementById('btnShare').classList.add('hidden');
         document.getElementById('btnNextChap').classList.add('hidden');
         document.getElementById('btnStop').classList.add('hidden');
-        document.getElementById('btnHistory').classList.remove('hidden');
+        document.getElementById('btnStats').classList.remove('hidden');
         document.querySelector('.search-wrapper').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
         ReaderAudio.stop();
         
-        // Update URL
         Router.navigate('/');
-        
-        // Ensure we are on the Book Grid (Force Reset)
         Selector.reset(true); 
     }
 };
@@ -181,39 +194,31 @@ const Settings = {
         theme: 'light',
         accentColor: '#0061a4'
     },
-    
     current: {},
     
-    // Initialize settings from localStorage
     init: () => {
         Settings.load();
         Settings.applyAll();
     },
     
-    // Load settings from localStorage
     load: () => {
         Settings.current = { ...Settings.defaults };
-        
         const theme = AppAPI.getGlobal("BibleThemeMode");
         if(theme) Settings.current.theme = theme;
-        
         const accentColor = AppAPI.getGlobal("BibleAccentColor");
         if(accentColor) Settings.current.accentColor = accentColor;
     },
     
-    // Save current settings to localStorage
     save: () => {
         AppAPI.setGlobal("BibleThemeMode", Settings.current.theme);
         AppAPI.setGlobal("BibleAccentColor", Settings.current.accentColor);
     },
     
-    // Apply all settings
     applyAll: () => {
         Settings.applyTheme(Settings.current.theme);
         Settings.applyAccentColor(Settings.current.accentColor);
     },
     
-    // Theme
     setTheme: (theme) => {
         Settings.current.theme = theme;
         Settings.applyTheme(theme);
@@ -223,20 +228,15 @@ const Settings = {
     
     applyTheme: (theme) => {
         document.documentElement.setAttribute('data-theme', theme);
-        
-        // Update theme options UI
         document.querySelectorAll('.theme-option').forEach(el => {
             el.classList.toggle('active', el.dataset.themeOption === theme);
         });
     },
     
-    // Accent Color
     setAccentColor: (color) => {
         Settings.current.accentColor = color;
         Settings.applyAccentColor(color);
         Settings.save();
-        
-        // Update color picker and presets
         document.getElementById('accentColorPicker').value = color;
         document.querySelectorAll('.color-preset').forEach(el => {
             el.classList.toggle('active', el.style.background === color);
@@ -246,12 +246,8 @@ const Settings = {
     applyAccentColor: (hexColor) => {
         const root = document.documentElement;
         const theme = Settings.current.theme;
-        
-        // Generate lighter/darker variants
         const rgb = Settings.hexToRgb(hexColor);
         
-        // For light themes, use the color as-is for primary
-        // For dark themes, lighten the color
         let primaryColor, onPrimary, primaryContainer, onPrimaryContainer;
         
         if(theme === 'light') {
@@ -276,12 +272,10 @@ const Settings = {
         root.style.setProperty('--primary-container', primaryContainer);
         root.style.setProperty('--on-primary-container', onPrimaryContainer);
         
-        // Update wave primary SVG
         const wavePrimary = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='6' viewBox='0 0 20 6'%3E%3Cpath d='M0 3 Q5 0 10 3 T20 3' fill='none' stroke='${encodeURIComponent(primaryColor)}' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")`;
         root.style.setProperty('--wave-primary', wavePrimary);
     },
     
-    // Color utility functions
     hexToRgb: (hex) => {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
@@ -313,19 +307,15 @@ const Settings = {
         return luminance > 0.5 ? '#000000' : '#ffffff';
     },
     
-    // Reset to defaults
     reset: () => {
         Settings.current = { ...Settings.defaults };
         Settings.applyAll();
         Settings.save();
     },
     
-    // Modal controls
     openModal: () => {
-        // Sync UI with current settings
         Settings.applyTheme(Settings.current.theme);
         document.getElementById('accentColorPicker').value = Settings.current.accentColor;
-        
         document.getElementById('settingsModal').classList.add('open');
     },
     
@@ -346,7 +336,6 @@ const Selector = {
         const last = AppAPI.getGlobal("BibleLastRead");
         list.forEach(b => {
             const el = document.createElement('div'); el.className = 'card'; el.innerText = b.n;
-            // Simplified check since we removed absolute paths
             if(last && last.includes(b.n)) el.classList.add('last-read');
             el.onclick = () => Selector.openBook(b);
             grid.appendChild(el);
@@ -360,7 +349,7 @@ const Selector = {
         document.querySelector('.search-wrapper').classList.add('hidden');
         document.getElementById('btnBack').classList.remove('hidden');
         document.getElementById('btnBack').onclick = App.navBack;
-        document.getElementById('btnHistory').classList.add('hidden');
+        document.getElementById('btnStats').classList.add('hidden');
         
         const grid = document.getElementById('chapterGrid');
         grid.classList.remove('hidden'); grid.innerHTML = '';
@@ -375,7 +364,6 @@ const Selector = {
             grid.appendChild(el);
         }
         
-        // Update URL if not called from router
         if(!skipRouteUpdate) {
             const encodedBook = encodeURIComponent(b.n).replace(/%20/g, '_');
             Router.navigate(`/book/${encodedBook}`);
@@ -392,15 +380,12 @@ const Selector = {
             input.placeholder = "Search entire Bible...";
             document.getElementById('searchIcon').innerText = "search";
             document.getElementById('bookGrid').classList.add('hidden');
-            document.getElementById('historyList').classList.add('hidden');
             document.getElementById('searchList').classList.remove('hidden');
             
             if(initialQuery) {
-                // If query has brackets, remove them for input display
                 input.value = initialQuery.replace(/[\[\]]/g, "");
                 Selector.performSearch(initialQuery);
                 
-                // Update URL if not called from router
                 if(!skipRouteUpdate) {
                     const encodedQuery = encodeURIComponent(initialQuery).replace(/%20/g, '_');
                     Router.navigate(`/search/${encodedQuery}`);
@@ -444,28 +429,20 @@ const Selector = {
         }
         
         const cleanQ = query.toLowerCase().replace(/[\\]/g, "").replace(/\[/g, "").replace(/\]/g, "");
-        
-        // Filter
         let results = Selector.searchIndex.filter(item => item.t.toLowerCase().includes(cleanQ));
         
-        // SORT: Canonical Order (Gen -> Rev, then Chap, then Verse)
         results.sort((a, b) => {
-            // "Genesis 1" -> "Genesis", "1"
             const lastSpaceA = a.n.lastIndexOf(' ');
             const bookA = a.n.substring(0, lastSpaceA);
             const chapA = parseInt(a.n.substring(lastSpaceA + 1));
-            
             const lastSpaceB = b.n.lastIndexOf(' ');
             const bookB = b.n.substring(0, lastSpaceB);
             const chapB = parseInt(b.n.substring(lastSpaceB + 1));
             
-            // 1. Book Order
             if (bookA !== bookB) {
                 return (BOOK_ORDER[bookA] || 99) - (BOOK_ORDER[bookB] || 99);
             }
-            // 2. Chapter Order
             if (chapA !== chapB) return chapA - chapB;
-            // 3. Verse Order
             return parseInt(a.v) - parseInt(b.v);
         });
 
@@ -479,43 +456,12 @@ const Selector = {
         results.forEach(item => {
             const el = document.createElement('div'); el.className = 'result-card';
             const badge = item.v ? `<span class="res-badge">Verse ${item.v}</span>` : "";
-            // Clean display snippet
             const displaySnippet = item.t.replace(/\[\[[HG]\d+\]\]/g, "");
             
             el.innerHTML = `<div class="res-title"><span>${item.n}</span>${badge}</div><div class="res-snippet">${displaySnippet || item.t}</div>`;
             el.onclick = () => Reader.load(item.p, item.n);
             list.appendChild(el);
         });
-    },
-    
-    toggleHistory: () => {
-        const hList = document.getElementById('historyList');
-        if (hList.classList.contains('hidden')) {
-            hList.classList.remove('hidden');
-            document.getElementById('bookGrid').classList.add('hidden');
-            document.querySelector('.search-wrapper').classList.add('hidden');
-            document.getElementById('btnBack').classList.remove('hidden');
-            document.getElementById('btnBack').onclick = App.navBack;
-            document.getElementById('historyList').classList.add('hidden');
-            document.getElementById('bookGrid').classList.add('hidden');
-            document.querySelector('.search-wrapper').classList.add('hidden');
-            document.getElementById('btnBack').classList.add('hidden');
-            document.getElementById('headerLabel').innerText = "History";
-            
-            const raw = AppAPI.getGlobal("BibleHistory");
-            if(raw) {
-                JSON.parse(raw).forEach(c => {
-                    const el = document.createElement('div'); el.className = 'list-item';
-                    el.innerHTML = `<span class="material-icons-round" style="opacity:0.5">menu_book</span> <span>${c}</span>`;
-                    const b = c.substring(0, c.lastIndexOf(" "));
-                    const path = `bibles/BSB/BER-${b}/${c}.md`;
-                    el.onclick = () => Reader.load(path, c);
-                    hList.appendChild(el);
-                });
-            } else hList.innerHTML = '<div style="text-align:center;opacity:0.5;margin-top:20px">No history</div>';
-        } else {
-            Selector.reset();
-        }
     },
 
     reset: (skipRouteUpdate = false) => {
@@ -529,17 +475,17 @@ const Selector = {
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-plans').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
+        document.getElementById('view-stats').classList.add('hidden');
         document.getElementById('bookGrid').classList.remove('hidden');
         document.querySelector('.search-wrapper').classList.remove('hidden');
         
         document.getElementById('chapterGrid').classList.add('hidden');
         document.getElementById('searchList').classList.add('hidden');
         document.getElementById('btnBack').classList.add('hidden');
-        document.getElementById('btnHistory').classList.remove('hidden');
+        document.getElementById('btnStats').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
         Selector.renderBooks(BOOKS);
         
-        // Update URL if not called from router
         if(!skipRouteUpdate) {
             Router.navigate('/');
         }
@@ -555,6 +501,11 @@ const Reader = {
     selectedType: null,
 
     load: async (path, name, skipRouteUpdate = false) => {
+        // End any previous session before starting new one
+        if (SessionTracker.currentSession) {
+            await SessionTracker.endSession();
+        }
+        
         document.getElementById('view-selector').classList.add('hidden');
         document.getElementById('view-reader').classList.remove('hidden');
         document.getElementById('readerLoading').classList.remove('hidden');
@@ -565,14 +516,19 @@ const Reader = {
         document.getElementById('btnBack').onclick = App.navBack;
         document.getElementById('btnShare').classList.remove('hidden');
         document.getElementById('btnNextChap').classList.remove('hidden');
-        document.getElementById('btnHistory').classList.add('hidden');
+        document.getElementById('btnStats').classList.add('hidden');
         
         Reader.currentPath = path;
         Reader.currentName = name;
         AppAPI.setGlobal("BibleLastRead", path);
         Reader.updateHistory(name);
         
-        // Update URL if not called from router
+        // Start tracking this reading session
+        const parts = name.split(' ');
+        const chapter = parseInt(parts.pop());
+        const book = parts.join(' ');
+        SessionTracker.startSession(book, chapter);
+        
         if(!skipRouteUpdate) {
             const parts = name.split(" ");
             const num = parseInt(parts[parts.length-1]);
@@ -605,19 +561,16 @@ const Reader = {
             if(m) {
                 const vNum = m[1], vText = m[2].trim(), vId = `v-${vNum}`;
                 
-                // 1. Build token list (objects) not string
                 let tokens = [];
                 const parts = vText.split(/(\[\[[HG]\d+]\])/);
 
                 parts.forEach(p => {
                     if (p.match(/^\[\[[HG]\d+]\]$/)) {
                         const code = p.match(/[HG]\d+/)[0];
-                        // Attach to previous word token
                         for (let i = tokens.length - 1; i >= 0; i--) {
                             if (tokens[i].type === 'word') { tokens[i].code = code; break; }
                         }
                     } else if (p.trim() !== "") {
-                        // Split text
                         const sub = p.split(/(\s+)/);
                         sub.forEach(s => {
                             if (!s) return;
@@ -627,7 +580,6 @@ const Reader = {
                     } else if (p.match(/\s+/)) tokens.push({ type: 'space', text: p });
                 });
                 
-                // 2. Render tokens to HTML
                 let wordsHtml = "";
                 let wIdx = 0;
                 tokens.forEach(t => {
@@ -635,7 +587,6 @@ const Reader = {
                     else {
                         const wId = `${vId}-w-${wIdx}`;
                         const hl = Reader.highlightData[wId] || "";
-                        // If token has code, add lexicon class and data attribute
                         const lexClass = t.code ? "lexicon-word" : "";
                         const dataAttr = t.code ? `data-code="${t.code}"` : "";
                         wordsHtml += `<span id="${wId}" class="w ${hl} ${lexClass}" ${dataAttr} onclick="Reader.wordClick(event, '${wId}')">${t.text}</span>`;
@@ -668,7 +619,6 @@ const Reader = {
         AppAPI.setGlobal("BibleHistory", JSON.stringify(h));
     },
 
-    // Interactions
     verseClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='word') Reader.clearSel(); Reader.selectedType='verse'; Reader.toggleSel(id); },
     wordClick: (e, id) => { e.stopPropagation(); if(Reader.selectedType==='verse') Reader.clearSel(); Reader.selectedType='word'; Reader.toggleSel(id); },
     
@@ -700,6 +650,22 @@ const Reader = {
             else delete Reader.highlightData[id];
         });
         AppAPI.saveData(Reader.currentPath + ".json", JSON.stringify(Reader.highlightData));
+        
+        // Track highlight engagement
+        if (c) {
+            const parts = Reader.currentName.split(' ');
+            const chapter = parseInt(parts.pop());
+            const book = parts.join(' ');
+            StatsDB.addEngagementEvent({
+                eventType: 'highlight',
+                book: book,
+                chapter: chapter,
+                timestamp: new Date().toISOString(),
+                dateKey: new Date().toISOString().split('T')[0],
+                data: { color: c }
+            });
+        }
+        
         Reader.clearSel();
     },
     findUsage: () => {
@@ -736,7 +702,22 @@ const Reader = {
     closeNote: (e) => { if(e && e.target.id!=="noteModal") return; document.getElementById('noteModal').classList.remove('open'); },
     saveNote: () => {
         const key = "Note_" + Reader.currentName;
-        AppAPI.saveData(key, document.getElementById('noteInput').value);
+        const noteContent = document.getElementById('noteInput').value;
+        AppAPI.saveData(key, noteContent);
+        
+        // Track note engagement
+        const parts = Reader.currentName.split(' ');
+        const chapter = parseInt(parts.pop());
+        const book = parts.join(' ');
+        StatsDB.addEngagementEvent({
+            eventType: 'note',
+            book: book,
+            chapter: chapter,
+            timestamp: new Date().toISOString(),
+            dateKey: new Date().toISOString().split('T')[0],
+            data: { noteLength: noteContent.length }
+        });
+        
         Reader.closeNote();
     },
     deleteNote: () => { document.getElementById('noteInput').value = ""; Reader.saveNote(); },
@@ -748,7 +729,6 @@ const Reader = {
         Reader.clearSel();
     },
     
-    // Share functionality
     shareChapter: async () => {
         const parts = Reader.currentName.split(" ");
         const num = parseInt(parts[parts.length-1]);
@@ -760,7 +740,6 @@ const Reader = {
             try {
                 await navigator.share({ title, url });
             } catch(e) {
-                // User cancelled or share failed, fallback to copy
                 AppAPI.copy(url);
                 alert('Link copied to clipboard!');
             }
@@ -887,7 +866,6 @@ const ReadingPlans = {
     expandedDays: new Set(),
     subscribedPlans: [],
     
-    // Initialize - load subscribed plans from localStorage
     init: function() {
         const raw = AppAPI.getGlobal("ReadingPlansSubscribed");
         if (raw) {
@@ -898,7 +876,6 @@ const ReadingPlans = {
         }
     },
     
-    // Load available plans index
     loadPlansIndex: async function() {
         try {
             const res = await fetch('plans/index.json');
@@ -911,7 +888,6 @@ const ReadingPlans = {
         }
     },
     
-    // Load specific plan data
     loadPlan: async function(planId) {
         if (this.loadedPlans[planId]) return this.loadedPlans[planId];
         try {
@@ -926,7 +902,6 @@ const ReadingPlans = {
         }
     },
     
-    // Subscribe to a plan
     subscribe: function(planId) {
         if (this.subscribedPlans.find(function(p) { return p.planId === planId; })) return;
         const today = new Date().toISOString().split('T')[0];
@@ -938,28 +913,23 @@ const ReadingPlans = {
         this.saveSubscriptions();
     },
     
-    // Unsubscribe from a plan
     unsubscribe: function(planId) {
         this.subscribedPlans = this.subscribedPlans.filter(function(p) { return p.planId !== planId; });
         this.saveSubscriptions();
     },
     
-    // Save subscriptions to localStorage
     saveSubscriptions: function() {
         AppAPI.setGlobal("ReadingPlansSubscribed", JSON.stringify(this.subscribedPlans));
     },
     
-    // Check if subscribed to a plan
     isSubscribed: function(planId) {
         return !!this.subscribedPlans.find(function(p) { return p.planId === planId; });
     },
     
-    // Get progress for a plan
     getPlanProgress: function(planId) {
         return this.subscribedPlans.find(function(p) { return p.planId === planId; });
     },
     
-    // Calculate current day for a plan
     getCurrentDay: function(planId, planData) {
         const progress = this.getPlanProgress(planId);
         if (!progress) return 1;
@@ -969,20 +939,17 @@ const ReadingPlans = {
         return Math.max(1, Math.min(diffDays, planData.totalDays));
     },
     
-    // Get reading for a specific day
     getDayReading: function(planId, dayNum) {
         const plan = this.loadedPlans[planId];
         if (!plan) return null;
         return plan.readings.find(function(r) { return r.day === dayNum; });
     },
     
-    // Check if a day is complete
     isComplete: function(planId, dayNum) {
         const progress = this.getPlanProgress(planId);
         return progress && progress.completedDays.includes(dayNum);
     },
     
-    // Mark a day as complete
     markComplete: function(planId, dayNum) {
         const progress = this.getPlanProgress(planId);
         if (!progress) return;
@@ -992,7 +959,6 @@ const ReadingPlans = {
         }
     },
     
-    // Remove completion mark
     unmarkComplete: function(planId, dayNum) {
         const progress = this.getPlanProgress(planId);
         if (!progress) return;
@@ -1000,14 +966,12 @@ const ReadingPlans = {
         this.saveSubscriptions();
     },
     
-    // Calculate completion percentage
     getCompletionPercentage: function(planId, totalDays) {
         const progress = this.getPlanProgress(planId);
         if (!progress) return 0;
         return Math.round((progress.completedDays.length / totalDays) * 100);
     },
     
-    // Navigate to a reading reference
     navigateToReading: function(reference) {
         const match = reference.match(/^(.+?)\s+(\d+)$/);
         if (!match) return;
@@ -1016,25 +980,24 @@ const ReadingPlans = {
         const name = book + ' ' + chapter;
         const path = 'bibles/BSB/BER-' + book + '/' + name + '.md';
         
-        // Hide plan views before loading reader
         document.getElementById('view-plans').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
         
         Reader.load(path, name);
     },
     
-    // UI: Show Plans Dashboard
     showDashboard: async function(skipRouteUpdate) {
         const self = this;
         
         document.getElementById('view-selector').classList.add('hidden');
         document.getElementById('view-reader').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
+        document.getElementById('view-stats').classList.add('hidden');
         document.getElementById('view-plans').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "Reading Plans";
         document.getElementById('btnBack').classList.remove('hidden');
         document.getElementById('btnBack').onclick = App.navBack;
-        document.getElementById('btnHistory').classList.add('hidden');
+        document.getElementById('btnStats').classList.add('hidden');
         
         if (!skipRouteUpdate) {
             Router.navigate('/plans');
@@ -1088,20 +1051,16 @@ const ReadingPlans = {
         loader.classList.add('hidden');
     },
     
-    // UI: Hide Plans Dashboard
     hideDashboard: () => {
         document.getElementById('view-plans').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
         document.getElementById('btnBack').classList.add('hidden');
-        document.getElementById('btnHistory').classList.remove('hidden');
+        document.getElementById('btnStats').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
-        
-        // Update URL to home
         Router.navigate('/');
     },
     
-    // UI: Show Plan Preview
     showPreview: function(planId) {
         const plan = this.loadedPlans[planId];
         if (!plan) return;
@@ -1147,7 +1106,6 @@ const ReadingPlans = {
         gridContainer.appendChild(subscribeFooter);
     },
     
-    // UI: Show Plan Grid
     showPlanGrid: function(planId, skipRouteUpdate) {
         const plan = this.loadedPlans[planId];
         if (!plan) return;
@@ -1176,14 +1134,13 @@ const ReadingPlans = {
             dayCard.className = 'day-grid-card' + (isComplete ? ' completed' : '') + (isCurrent ? ' current' : '');
             dayCard.id = 'day-card-' + planId + '-' + reading.day;
             
-            // Compact view
             dayCard.innerHTML = 
                 '<div class="day-grid-header" onclick="ReadingPlans.toggleDayExpand(\'' + planId + '\', ' + reading.day + ')">' +
                     '<span class="day-grid-num">' + reading.day + '</span>' +
                     '<span class="day-grid-status">' + (isComplete ? '<span class="material-icons-round">check_circle</span>' : '') + '</span>' +
                 '</div>' +
                 '<div class="day-grid-refs">' +
-                    reading.sections.map(s => '<span class="day-ref-chip">' + s.reference + '</span>').join('')
+                    reading.sections.map(s => '<span class="day-ref-chip">' + s.reference + '</span>').join('') +
                 '</div>';
             
             gridContainer.appendChild(dayCard);
@@ -1195,7 +1152,6 @@ const ReadingPlans = {
         }, 100);
     },
     
-    // Toggle day expansion
     toggleDayExpand: function(planId, dayNum) {
         const card = document.getElementById('day-card-' + planId + '-' + dayNum);
         if (!card) return;
@@ -1205,13 +1161,11 @@ const ReadingPlans = {
         if (isExpanded) {
             this.expandedDays.delete(dayNum);
             card.classList.remove('expanded');
-            // Remove expanded content
             const expandedContent = card.querySelector('.day-expanded-content');
             if (expandedContent) expandedContent.remove();
         } else {
             this.expandedDays.add(dayNum);
             card.classList.add('expanded');
-            // Add expanded content
             const reading = this.getDayReading(planId, dayNum);
             const isComplete = this.isComplete(planId, dayNum);
             
@@ -1239,7 +1193,6 @@ const ReadingPlans = {
         }
     },
     
-    // Toggle day completion
     toggleDayComplete: function(planId, dayNum) {
         const isComplete = this.isComplete(planId, dayNum);
         if (isComplete) {
@@ -1276,5 +1229,3 @@ const ReaderScroll = {
 
 window.onload = App.init;
 console.log('[DEBUG] app.js - Script finished loading');
-console.log('[DEBUG] Settings defined?', typeof Settings !== 'undefined');
-console.log('[DEBUG] Selector defined?', typeof Selector !== 'undefined');

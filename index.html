@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:wght@400;500&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <!-- Chart.js for statistics graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -23,7 +25,7 @@
     <div style="display:flex; align-items:center" id="headerActions">
         <!-- Selector Actions -->
         <button class="icon-btn" id="btnPlans" onclick="ReadingPlans.showDashboard()"><span class="material-icons-round">calendar_month</span></button>
-        <button class="icon-btn" id="btnHistory" onclick="Selector.toggleHistory()"><span class="material-icons-round">history</span></button>
+        <button class="icon-btn" id="btnStats" onclick="StatsUI.showStatsPage()"><span class="material-icons-round">bar_chart</span></button>
         <!-- Reader Actions -->
         <button class="nav-btn hidden" id="btnStop" onclick="ReaderAudio.stop()" style="color:var(--primary-color)"><span class="material-icons-round">stop_circle</span></button>
         <button class="nav-btn hidden" id="btnShare" onclick="Reader.shareChapter()" title="Share"><span class="material-icons-round">share</span></button>
@@ -52,7 +54,6 @@
         <div id="bookGrid" class="grid"></div>
         <div id="chapterGrid" class="grid chapter-list hidden"></div>
         <div id="searchList" class="list-view hidden"></div>
-        <div id="historyList" class="list-view hidden"></div>
         <div id="loader" class="loading hidden"><span class="material-icons-round spin">sync</span><br><span>Searching...</span></div>
     </section>
 
@@ -84,6 +85,120 @@
             <button class="btn-fill btn-complete" id="btnMarkComplete">
                 <span class="material-icons-round">radio_button_unchecked</span> Mark Complete
             </button>
+        </div>
+    </section>
+
+    <!-- VIEW 5: STATS DASHBOARD -->
+    <section id="view-stats" class="hidden">
+        <div id="statsLoader" class="loading"><span class="material-icons-round spin">sync</span><br><span>Loading stats...</span></div>
+        <div id="statsContent" class="stats-content hidden">
+            <!-- Streak & Quick Stats Row -->
+            <div class="stats-row">
+                <div class="stat-card streak-card">
+                    <div class="stat-icon" id="streakIcon">
+                        <span class="material-icons-round">local_fire_department</span>
+                    </div>
+                    <div class="stat-value" id="streakCurrent">0</div>
+                    <div class="stat-label">Day Streak</div>
+                    <div class="stat-sub">Best: <span id="streakLongest">0 days</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">menu_book</span>
+                    </div>
+                    <div class="stat-value" id="chaptersToday">0</div>
+                    <div class="stat-label">Chapters Today</div>
+                    <div class="stat-sub">Week: <span id="chaptersWeek">0</span></div>
+                </div>
+            </div>
+
+            <!-- Time Stats Row -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">schedule</span>
+                    </div>
+                    <div class="stat-value" id="timeToday">0m</div>
+                    <div class="stat-label">Time Today</div>
+                    <div class="stat-sub">Week: <span id="timeWeek">0m</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">library_books</span>
+                    </div>
+                    <div class="stat-value" id="booksStarted">0</div>
+                    <div class="stat-label">Books Started</div>
+                    <div class="stat-sub">Done: <span id="booksCompleted">0</span></div>
+                </div>
+            </div>
+
+            <!-- Weekly Chart -->
+            <div class="chart-card">
+                <div class="chart-title">This Week's Activity</div>
+                <div class="chart-container">
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Monthly Stats -->
+            <div class="stats-row stats-row-3">
+                <div class="stat-card-small">
+                    <div class="stat-value-small" id="chaptersMonth">0</div>
+                    <div class="stat-label-small">This Month</div>
+                </div>
+                <div class="stat-card-small">
+                    <div class="stat-value-small" id="timeMonth">0m</div>
+                    <div class="stat-label-small">Time Month</div>
+                </div>
+                <div class="stat-card-small">
+                    <div class="stat-value-small" id="chaptersTotal">0</div>
+                    <div class="stat-label-small">All Time</div>
+                </div>
+            </div>
+
+            <!-- Hourly Distribution Chart -->
+            <div class="chart-card">
+                <div class="chart-title">Reading Time Distribution</div>
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bible Coverage -->
+            <div class="coverage-card">
+                <div class="coverage-header">
+                    <span class="material-icons-round">auto_stories</span>
+                    <span>Bible Coverage</span>
+                    <span class="coverage-pct" id="booksCoverage">0%</span>
+                </div>
+                <div class="coverage-bar">
+                    <div class="coverage-fill" id="coverageBar"></div>
+                </div>
+            </div>
+
+            <!-- Engagement Stats -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">highlight</span>
+                    </div>
+                    <div class="stat-value" id="totalHighlights">0</div>
+                    <div class="stat-label">Highlights</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">note</span>
+                    </div>
+                    <div class="stat-value" id="totalNotes">0</div>
+                    <div class="stat-label">Notes</div>
+                </div>
+            </div>
+
+            <!-- Book Progress Grid -->
+            <div class="book-progress-section">
+                <div class="section-title">Book Progress</div>
+                <div id="bookProgressGrid" class="book-progress-grid"></div>
+            </div>
         </div>
     </section>
 </main>
@@ -248,6 +363,10 @@
 
 <!-- SCRIPTS -->
 <script src="js/adapter.js"></script>
+<script src="js/stats-db.js"></script>
+<script src="js/stats-tracker.js"></script>
+<script src="js/stats-calculator.js"></script>
+<script src="js/stats-ui.js"></script>
 <script src="js/app.js"></script>
 <script>
     if ('serviceWorker' in navigator) {
