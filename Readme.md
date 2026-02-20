@@ -1,4 +1,4 @@
-# WordWideWeb 🌍📖
+# WordWideWeb 🌍
 
 A lightning-fast, offline-first Bible Reader built on the web platform.
 
@@ -18,7 +18,17 @@ It treats a standard file system (Markdown text and MP3 audio) as a database, fe
 - **Auto-Scroll:** Hands-free reading with variable speed control.
 - **Lexicon Integration:** Instant definitions for Strong's numbers (e.g., [[H1234]]).
 
-### 📅 Reading Plans
+### 📊 Reading Statistics
+- **Streak Tracking:** Current and longest reading streaks with visual indicators.
+- **Chapter Metrics:** Chapters read today, this week, month, and all-time.
+- **Time Tracking:** Automatic time spent reading with visibility-aware tracking.
+- **Visual Charts:** Weekly activity bar chart and hourly distribution line chart.
+- **Book Progress:** Visual grid showing completion percentage for each book.
+- **Bible Coverage:** Overall percentage of the Bible you've read.
+- **Engagement Stats:** Highlights and notes count.
+- **IndexedDB Storage:** All stats persist locally in the browser's IndexedDB.
+
+###  Reading Plans
 - **Multiple Plans:** Subscribe to multiple reading plans simultaneously.
 - **Progress Tracking:** Completed days tracked locally in browser storage.
 - **Flexible Start:** Plans can start on subscription or on a specific calendar date.
@@ -33,8 +43,8 @@ It treats a standard file system (Markdown text and MP3 audio) as a database, fe
 ### 💾 Local-First Data
 - **Persistent Highlights:** Highlight verses or individual words in 5 different colors.
 - **Private Notes:** Write study notes attached to specific chapters.
-- **History:** Tracks your recent reading.
-- **Zero Cloud Dependency:** All user data is stored in the browser's localStorage.
+- **Reading Statistics:** Comprehensive stats dashboard with streaks and charts.
+- **Zero Cloud Dependency:** All user data is stored in browser storage (localStorage + IndexedDB).
 
 ### 🔍 Search
 - **Client-Side Indexing:** Performs lightning-fast searches using a pre-generated JSON index of the entire text.
@@ -113,7 +123,11 @@ To deploy your own instance, organize your repository exactly as follows:
 │
 ├── js/
 │   ├── app.js            # Core Logic (UI, State, Router)
-│   └── adapter.js        # Platform Abstraction Layer (IO)
+│   ├── adapter.js        # Platform Abstraction Layer (IO)
+│   ├── stats-db.js       # IndexedDB Wrapper for Statistics
+│   ├── stats-tracker.js  # Reading Session Tracking
+│   ├── stats-calculator.js # Statistics Computation Engine
+│   └── stats-ui.js       # Statistics Dashboard Rendering
 │
 ├── data/
 │   └── search_index.json # Generated Search Map
@@ -158,24 +172,35 @@ We are actively developing new features. Here is the priority list:
   - Customizable accent color with 8 presets or custom color picker
   - All settings persist in localStorage
 
-- **Swipe Gestures:**
+- **Reading Statistics:** ✅ IMPLEMENTED
+  - Visual dashboard showing streaks, chapters read, and time spent reading
+  - IndexedDB-based storage for larger datasets
+  - Automatic session tracking with visibility awareness
+  - Weekly activity and hourly distribution charts
+  - Book-by-book progress tracking
+
+- **Swipe Gestures:** ✅ IMPLEMENTED
   - Horizontal swipe detection on the reader view
   - Navigate to previous/next chapter
+  - Swipe right for previous chapter, swipe left for next chapter
 
 - **Installation Prompts:**
   - Custom UI element to encourage PWA installation
 
-- **Scroll Progress Bar:**
+- **Scroll Progress Bar:** ✅ IMPLEMENTED
   - Visual indicator showing reading progress within current chapter
+  - Fixed position below header, uses theme primary color
 
 ### Phase 2: Data & Analytics (Static / GitHub Pages)
 
 - **Backup & Restore:**
-  - Export all user data (highlights, notes, history, reading plan progress) to JSON
+  - Export all user data (highlights, notes, history, reading plan progress, statistics) to JSON
   - Restore on another device
 
-- **Reading Statistics:**
-  - Visual dashboard showing streaks, chapters read, and time spent reading
+- **Advanced Analytics:**
+  - Year-over-year reading comparisons
+  - Reading velocity trends
+  - Goal setting and progress tracking
 
 ### Phase 3: Connected Features (Requires Backend)
 
@@ -296,6 +321,38 @@ Since there is no backend server to run queries, the app relies on a client-side
 3. Select **Source: Deploy from a branch**.
 4. Select **Branch: main** (or master) and **folder: / (root)**
 5. Save. Your PWA is now live globally.
+
+## 📊 Statistics System Architecture
+
+The reading statistics feature uses IndexedDB for persistent storage, enabling larger datasets than localStorage allows.
+
+### IndexedDB Schema
+
+| Object Store | Purpose | Key Path |
+|--------------|---------|----------|
+| `reading_sessions` | Individual reading events | `id` (auto-increment) |
+| `daily_stats` | Pre-aggregated daily statistics | `dateKey` (YYYY-MM-DD) |
+| `book_progress` | Per-book completion tracking | `bookName` |
+| `engagement_events` | Highlights and notes | `id` (auto-increment) |
+
+### Session Tracking Flow
+
+1. **Start:** When a chapter opens, `SessionTracker.startSession(book, chapter)` begins tracking
+2. **Pause:** When the tab becomes hidden, tracking pauses (visibility API)
+3. **Resume:** When the tab becomes visible again, tracking resumes
+4. **End:** When navigating away, `SessionTracker.endSession()` saves the session to IndexedDB
+
+### Statistics Calculation
+
+The `StatsCalculator` module computes:
+- **Streaks:** Consecutive days with reading activity
+- **Aggregations:** Chapters/time per day, week, month, year
+- **Patterns:** Hourly distribution of reading sessions
+- **Coverage:** Percentage of Bible books with progress
+
+### Data Migration
+
+On first load after update, the system automatically migrates old localStorage history data to IndexedDB.
 
 ---
 

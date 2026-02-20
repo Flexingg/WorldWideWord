@@ -98,6 +98,26 @@ header.scrolled {
     box-shadow: 0 2px 6px rgba(0,0,0,0.1); 
 }
 
+/* --- SCROLL PROGRESS BAR --- */
+.scroll-progress-bar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    z-index: 99;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.scroll-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--primary-color);
+    transition: width 0.1s ease-out;
+}
+
 .icon-btn, .nav-btn { 
     background: none; border: none; padding: 8px; 
     border-radius: 50%; cursor: pointer; 

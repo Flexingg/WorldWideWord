@@ -136,6 +136,10 @@ const App = {
             console.error('[DEBUG] Stats system init error:', e);
         }
         
+        // Initialize swipe gestures and scroll progress
+        SwipeGestures.init();
+        ScrollProgress.init();
+        
         Router.init();
         
         const autoS = AppAPI.getGlobal("BibleAutoSearch");
@@ -492,6 +496,109 @@ const Selector = {
     }
 };
 
+// --- SWIPE GESTURES MODULE ---
+const SwipeGestures = {
+    touchStartX: 0,
+    touchStartY: 0,
+    touchEndX: 0,
+    touchEndY: 0,
+    minSwipeDistance: 50,
+    maxVerticalDistance: 100,
+    
+    init: () => {
+        const readerView = document.getElementById('view-reader');
+        readerView.addEventListener('touchstart', SwipeGestures.handleTouchStart, { passive: true });
+        readerView.addEventListener('touchend', SwipeGestures.handleTouchEnd, { passive: true });
+    },
+    
+    handleTouchStart: (e) => {
+        SwipeGestures.touchStartX = e.changedTouches[0].screenX;
+        SwipeGestures.touchStartY = e.changedTouches[0].screenY;
+    },
+    
+    handleTouchEnd: (e) => {
+        SwipeGestures.touchEndX = e.changedTouches[0].screenX;
+        SwipeGestures.touchEndY = e.changedTouches[0].screenY;
+        SwipeGestures.processSwipe();
+    },
+    
+    processSwipe: () => {
+        const deltaX = SwipeGestures.touchEndX - SwipeGestures.touchStartX;
+        const deltaY = Math.abs(SwipeGestures.touchEndY - SwipeGestures.touchStartY);
+        
+        // Check if horizontal swipe is significant and vertical drift is minimal
+        if (Math.abs(deltaX) > SwipeGestures.minSwipeDistance && 
+            deltaY < SwipeGestures.maxVerticalDistance) {
+            
+            if (deltaX > 0) {
+                // Swipe right - go to previous chapter
+                Reader.navPrev();
+            } else {
+                // Swipe left - go to next chapter
+                Reader.navNext();
+            }
+        }
+    }
+};
+
+// --- SCROLL PROGRESS MODULE ---
+const ScrollProgress = {
+    progressBar: null,
+    progressFill: null,
+    
+    init: () => {
+        ScrollProgress.progressBar = document.getElementById('scrollProgressBar');
+        ScrollProgress.progressFill = document.getElementById('scrollProgressFill');
+        
+        window.addEventListener('scroll', ScrollProgress.updateProgress, { passive: true });
+    },
+    
+    updateProgress: () => {
+        // Only update when reader view is visible
+        const readerView = document.getElementById('view-reader');
+        if (readerView.classList.contains('hidden')) {
+            ScrollProgress.setProgress(0);
+            ScrollProgress.hide();
+            return;
+        }
+        
+        ScrollProgress.show();
+        
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        
+        if (scrollHeight <= 0) {
+            ScrollProgress.setProgress(0);
+            return;
+        }
+        
+        const progress = (scrollTop / scrollHeight) * 100;
+        ScrollProgress.setProgress(progress);
+    },
+    
+    setProgress: (percent) => {
+        if (ScrollProgress.progressFill) {
+            ScrollProgress.progressFill.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+        }
+    },
+    
+    reset: () => {
+        ScrollProgress.setProgress(0);
+    },
+    
+    show: () => {
+        if (ScrollProgress.progressBar) {
+            ScrollProgress.progressBar.classList.remove('hidden');
+        }
+    },
+    
+    hide: () => {
+        if (ScrollProgress.progressBar) {
+            ScrollProgress.progressBar.classList.add('hidden');
+        }
+    }
+};
+
 // --- READER ---
 const Reader = {
     currentPath: "",
@@ -522,6 +629,9 @@ const Reader = {
         Reader.currentName = name;
         AppAPI.setGlobal("BibleLastRead", path);
         Reader.updateHistory(name);
+        
+        // Reset scroll progress for new chapter
+        ScrollProgress.reset();
         
         // Start tracking this reading session
         const parts = name.split(' ');
@@ -608,6 +718,19 @@ const Reader = {
         const nextName = `${book} ${num+1}`;
         const path = `bibles/BSB/BER-${book}/${nextName}.md`;
         Reader.load(path, nextName);
+    },
+
+    navPrev: () => {
+        const parts = Reader.currentName.split(" ");
+        const num = parseInt(parts[parts.length-1]);
+        const book = parts.slice(0, parts.length-1).join(" ");
+        
+        // Don't navigate if at chapter 1
+        if (num <= 1) return;
+        
+        const prevName = `${book} ${num-1}`;
+        const path = `bibles/BSB/BER-${book}/${prevName}.md`;
+        Reader.load(path, prevName);
     },
 
     updateHistory: (name) => {
