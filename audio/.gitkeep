@@ -1,0 +1,5 @@
+# This directory contains generated MP3 audio files for Bible chapters
+# Files are named: {Book}_{Chapter}.mp3
+# Example: Genesis_1.mp3, Matthew_5.mp3, 1_Samuel_3.mp3
+
+# Refer to readme.md for instructions on how to generate these files using the generate_audio.py script and Azure TTS.

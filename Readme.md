@@ -193,7 +193,7 @@ We are actively developing new features. Here is the priority list:
 
 ### Phase 2: Data & Analytics (Static / GitHub Pages)
 
-- **Backup & Restore:**
+- **Backup & Restore:** ✅ IMPLEMENTED
   - Export all user data (highlights, notes, history, reading plan progress, statistics) to JSON
   - Restore on another device
 
@@ -314,7 +314,82 @@ Since there is no backend server to run queries, the app relies on a client-side
 3. This creates/updates `data/search_index.json`.
 4. Commit and push the new JSON file to GitHub.
 
-### 4. Hosting on GitHub Pages
+### 4. Generating Audio Files with Azure TTS
+
+WordWideWeb includes a script to generate MP3 audio files for Bible chapters using Azure Cognitive Services Text-to-Speech.
+
+#### Prerequisites
+
+1. **Azure Account:** You need an Azure subscription with Speech Services enabled.
+2. **Get Credentials:**
+   - Go to [Azure Portal](https://portal.azure.com)
+   - Create or navigate to Speech Services
+   - Copy the **Key** and **Region** from "Keys and Endpoint"
+
+3. **Install Dependencies:**
+   ```bash
+   pip install -r requirements-audio.txt
+   ```
+
+#### Configuration
+
+Create a `.env` file in the project root (or copy from `.env.example`):
+
+```env
+AZURE_TTS_KEY=your-subscription-key-here
+AZURE_TTS_REGION=eastus
+```
+
+#### Usage
+
+```bash
+# List available voices
+python generate_audio.py --list-voices
+
+# Generate audio for all chapters (skips existing files)
+python generate_audio.py --voice "en-US-JennyNeural"
+
+# Generate audio for a specific book
+python generate_audio.py --voice "en-US-JennyNeural" --book "Matthew"
+
+# Generate audio for a specific chapter
+python generate_audio.py --voice "en-US-JennyNeural" --book "Matthew" --chapter 1
+
+# Preview what would be generated (dry run)
+python generate_audio.py --voice "en-US-JennyNeural" --dry-run
+
+# Force regenerate all files (overwrite existing)
+python generate_audio.py --voice "en-US-JennyNeural" --force
+```
+
+#### Output Structure
+
+Generated MP3 files are saved to the `audio/` directory with naming convention:
+- `Genesis_1.mp3`
+- `1_Samuel_3.mp3`
+- `Song_of_Solomon_1.mp3`
+
+> **Note:** The app currently looks for audio in `bibles/BSB/BER-{Book}/Audio/{Book} {Chapter}/part_0.mp3`. Future updates will integrate the new `audio/` directory structure.
+
+#### Text Processing
+
+The script automatically:
+- Strips lexicon references like `[[G976]]` for clean audio
+- Extracts verse text from markdown format
+- Adds verse number announcements ("Verse 1...", "Verse 2...")
+- Uses a slightly slower speech rate for clarity
+
+#### Cost Considerations
+
+Azure TTS pricing is based on characters processed. As of 2025:
+- Standard voices: ~$4 per 1 million characters
+- Neural voices: ~$16 per 1 million characters
+
+The entire Bible contains approximately 3.5 million characters, so generating all audio would cost roughly:
+- Standard: ~$14
+- Neural: ~$56
+
+### 5. Hosting on GitHub Pages
 
 1. Push this code to a GitHub repository.
 2. Go to **Settings > Pages**.
