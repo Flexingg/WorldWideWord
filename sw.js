@@ -10,6 +10,7 @@ const APP_SHELL = [
   "./js/stats-tracker.js",
   "./js/stats-calculator.js",
   "./js/stats-ui.js",
+  "./js/offline-cache.js",
   "./manifest.json",
   "./offline.html",
   // Icons

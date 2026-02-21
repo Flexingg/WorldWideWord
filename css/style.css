@@ -1197,3 +1197,96 @@ input[type=range].h-slider::-moz-range-thumb {
         font-size: 28px;
     }
 }
+
+/* ==================== OFFLINE STORAGE STYLES ==================== */
+
+.offline-storage-info {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.storage-stat {
+    flex: 1;
+    background: var(--surface-container);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+}
+
+.storage-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 11px;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.storage-value {
+    font-family: 'Roboto', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.download-progress {
+    margin-bottom: 16px;
+}
+
+.download-progress .progress-bar {
+    height: 8px;
+    background: var(--surface-container);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.download-progress .progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.download-progress .progress-text {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    color: var(--text-subtle);
+    text-align: center;
+}
+
+.download-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.download-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    font-size: 15px;
+}
+
+.download-btn .material-icons-round {
+    font-size: 20px;
+}
+
+.download-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.clear-cache-btn {
+    font-size: 13px;
+    color: var(--text-subtle);
+    padding: 8px;
+}
+
+.clear-cache-btn:hover {
+    color: var(--text-color);
+}

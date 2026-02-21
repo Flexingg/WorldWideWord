@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>WordWideWeb</title>
     <meta name="description" content="Word of God">
-    
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#0061a4">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,10 +15,10 @@
     <meta name="application-name" content="WordWideWeb">
     <meta name="msapplication-TileColor" content="#0061a4">
     <meta name="msapplication-tap-highlight" content="no">
-    
+
     <!-- Manifest -->
     <link rel="manifest" href="manifest.json">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
     <link rel="icon" type="image/png" sizes="72x72" href="icons/icon-72x72.png">
@@ -30,23 +30,23 @@
     <link rel="icon" type="image/png" sizes="256x256" href="icons/icon-256x256.png">
     <link rel="icon" type="image/png" sizes="384x384" href="icons/icon-384x384.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
-    
+
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="icons/icon-152x152.png">
     <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
     <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192x192.png">
-    
+
     <!-- Open Graph -->
     <meta property="og:title" content="WordWideWeb - Bible Reader">
     <meta property="og:description" content="Offline-first Bible Reader PWA">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://flexingg.github.io/WordWideWeb/">
-    
+
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="WordWideWeb - Bible Reader">
     <meta name="twitter:description" content="Offline-first Bible Reader PWA">
-    
+
     <!-- Fonts and Styles -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Serif:wght@400;500&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -362,6 +362,42 @@
             </button>
         </div>
         
+        <!-- Offline Storage Section -->
+        <div class="settings-section">
+            <div class="settings-section-title">
+                <span class="material-icons-round">cloud_download</span>
+                Offline Storage
+            </div>
+            
+            <div class="offline-storage-info">
+                <div class="storage-stat">
+                    <span class="storage-label">Cached Files</span>
+                    <span class="storage-value" id="cachedFilesCount">0</span>
+                </div>
+                <div class="storage-stat">
+                    <span class="storage-label">Storage Used</span>
+                    <span class="storage-value" id="storageUsed">0 MB</span>
+                </div>
+            </div>
+            
+            <div class="download-progress hidden" id="downloadProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="downloadProgressFill"></div>
+                </div>
+                <div class="progress-text" id="downloadProgressText">Preparing...</div>
+            </div>
+            
+            <div class="download-actions">
+                <button class="btn-fill download-btn" id="btnDownloadAll" onclick="OfflineCache.downloadAll()">
+                    <span class="material-icons-round">download</span>
+                    Download All Content
+                </button>
+                <button class="btn-text clear-cache-btn" onclick="OfflineCache.clearCache()">
+                    Clear Cache
+                </button>
+            </div>
+        </div>
+        
         <!-- Appearance Section -->
         <div class="settings-section">
             <div class="settings-section-title">
@@ -415,6 +451,7 @@
 <script src="js/stats-tracker.js"></script>
 <script src="js/stats-calculator.js"></script>
 <script src="js/stats-ui.js"></script>
+<script src="js/offline-cache.js"></script>
 <script src="js/app.js"></script>
 <script>
     if ('serviceWorker' in navigator) {
