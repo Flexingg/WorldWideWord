@@ -1,12 +1,12 @@
 {
   "name": "WordWideWeb",
-  "short_name": "Bible",
-  "description": "Offline-first Bible Reader PWA",
+  "short_name": "Word",
+  "description": "Word of God",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0061a4",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "portrait",
   "categories": ["books", "lifestyle"],
   "icons": [

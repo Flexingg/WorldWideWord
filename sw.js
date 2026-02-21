@@ -1,4 +1,5 @@
-const CACHE_NAME = "bible-app-v8";
+const CACHE_NAME = "bible-app-v9";
+const CONTENT_CACHE = "bible-content-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -39,7 +40,7 @@ self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME)
+        keys.filter((key) => key !== CACHE_NAME && key !== CONTENT_CACHE)
             .map((key) => caches.delete(key))
       );
     })
@@ -54,19 +55,53 @@ self.addEventListener("fetch", (e) => {
   // Skip non-GET requests
   if (e.request.method !== "GET") return;
   
-  // Bible content, lexicon, and search index - stale while revalidate
+  // Skip cross-origin requests (except for same-origin content)
+  if (url.origin !== location.origin) {
+    // Let external resources (fonts, CDN) pass through without caching
+    return;
+  }
+  
+  // Bible content, lexicon, and search index - cache first, then network
+  // This ensures content is available offline once it's been read
   if (url.pathname.includes("/bibles/") || 
       url.pathname.includes("/lexicon/") || 
       url.pathname.includes("search_index.json") ||
       url.pathname.includes("/plans/")) {
     e.respondWith(
-      caches.open(CACHE_NAME).then((cache) => {
+      caches.open(CONTENT_CACHE).then((cache) => {
         return cache.match(e.request).then((cached) => {
-          const fetched = fetch(e.request).then((net) => {
-            cache.put(e.request, net.clone());
-            return net;
-          }).catch(() => cached);
-          return cached || fetched;
+          // Return cached version immediately if available
+          if (cached) {
+            // Fetch in background to update cache
+            fetch(e.request).then((net) => {
+              if (net.ok) {
+                cache.put(e.request, net.clone());
+              }
+            }).catch(() => {}); // Ignore network errors
+            return cached;
+          }
+          
+          // No cache - try network, then cache
+          return fetch(e.request)
+            .then((net) => {
+              if (net.ok) {
+                cache.put(e.request, net.clone());
+              }
+              return net;
+            })
+            .catch(() => {
+              // Network failed and no cache - return offline message for content
+              console.log('[SW] Offline and no cache for:', url.pathname);
+              return new Response(
+                JSON.stringify({ 
+                  error: "offline", 
+                  message: "This content hasn't been cached yet. Please connect to the internet and try again." 
+                }),
+                { 
+                  headers: { "Content-Type": "application/json" } 
+                }
+              );
+            });
         });
       })
     );
@@ -104,4 +139,19 @@ self.addEventListener("fetch", (e) => {
       });
     })
   );
+});
+
+// Listen for messages from the main app
+self.addEventListener("message", (e) => {
+  // Allow the app to trigger cache clearing
+  if (e.data === "clear-content-cache") {
+    caches.delete(CONTENT_CACHE);
+  }
+  
+  // Allow the app to pre-cache specific chapters
+  if (e.data && e.data.type === "cache-urls") {
+    caches.open(CONTENT_CACHE).then((cache) => {
+      cache.addAll(e.data.urls);
+    });
+  }
 });
