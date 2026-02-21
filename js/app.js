@@ -196,7 +196,8 @@ const App = {
 const Settings = {
     defaults: {
         theme: 'light',
-        accentColor: '#0061a4'
+        accentColor: '#0061a4',
+        textSize: 19
     },
     current: {},
     
@@ -211,16 +212,20 @@ const Settings = {
         if(theme) Settings.current.theme = theme;
         const accentColor = AppAPI.getGlobal("BibleAccentColor");
         if(accentColor) Settings.current.accentColor = accentColor;
+        const textSize = AppAPI.getGlobal("BibleTextSize");
+        if(textSize) Settings.current.textSize = parseInt(textSize);
     },
     
     save: () => {
         AppAPI.setGlobal("BibleThemeMode", Settings.current.theme);
         AppAPI.setGlobal("BibleAccentColor", Settings.current.accentColor);
+        AppAPI.setGlobal("BibleTextSize", Settings.current.textSize.toString());
     },
     
     applyAll: () => {
         Settings.applyTheme(Settings.current.theme);
         Settings.applyAccentColor(Settings.current.accentColor);
+        Settings.applyTextSize(Settings.current.textSize);
     },
     
     setTheme: (theme) => {
@@ -280,6 +285,24 @@ const Settings = {
         root.style.setProperty('--wave-primary', wavePrimary);
     },
     
+    setTextSize: (size) => {
+        Settings.current.textSize = parseInt(size);
+        Settings.applyTextSize(size);
+        Settings.save();
+    },
+    
+    applyTextSize: (size) => {
+        const contentArea = document.getElementById('contentArea');
+        if (contentArea) {
+            contentArea.style.fontSize = size + 'px';
+        }
+        // Update slider and value display
+        const slider = document.getElementById('textSizeSlider');
+        const valueDisplay = document.getElementById('textSizeValue');
+        if (slider) slider.value = size;
+        if (valueDisplay) valueDisplay.textContent = size + 'px';
+    },
+    
     hexToRgb: (hex) => {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
@@ -320,6 +343,8 @@ const Settings = {
     openModal: () => {
         Settings.applyTheme(Settings.current.theme);
         document.getElementById('accentColorPicker').value = Settings.current.accentColor;
+        document.getElementById('textSizeSlider').value = Settings.current.textSize;
+        document.getElementById('textSizeValue').textContent = Settings.current.textSize + 'px';
         document.getElementById('settingsModal').classList.add('open');
     },
     
@@ -1304,8 +1329,8 @@ const ReadingPlans = {
         document.getElementById('view-plans').classList.add('hidden');
         document.getElementById('view-plans-grid').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
-        document.getElementById('btnBack').classList.add('hidden');
-        document.getElementById('btnStats').classList.remove('hidden');
+        document.getElementById('btn-back').classList.add('hidden');
+        document.getElementById('btn-stats').classList.remove('hidden');
         document.getElementById('headerLabel').innerText = "The Bible";
         Router.navigate('/');
     },

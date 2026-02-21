@@ -437,6 +437,17 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Text Size Slider -->
+            <div class="text-size-section">
+                <div class="settings-label">Reading Text Size</div>
+                <div class="text-size-slider-wrapper">
+                    <span class="text-size-label">A</span>
+                    <input type="range" class="h-slider text-size-slider" id="textSizeSlider" min="6" max="50" value="19" oninput="Settings.setTextSize(this.value)">
+                    <span class="text-size-label text-size-label-large">A</span>
+                </div>
+                <div class="text-size-value" id="textSizeValue">19px</div>
+            </div>
         </div>
         
         <button class="settings-reset" onclick="Settings.reset()">

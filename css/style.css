@@ -891,6 +891,44 @@ input[type=range].h-slider::-moz-range-thumb {
     border-color: var(--text-color);
 }
 
+/* Text Size Slider */
+.text-size-section {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--surface-container);
+    border-radius: 16px;
+}
+
+.text-size-slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.text-size-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    color: var(--text-subtle);
+    font-weight: 500;
+}
+
+.text-size-label-large {
+    font-size: 20px;
+}
+
+.text-size-slider {
+    flex: 1;
+}
+
+.text-size-value {
+    text-align: center;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    color: var(--text-subtle);
+    margin-top: 8px;
+}
+
 /* Reset Button */
 .settings-reset {
     margin-top: 24px;
