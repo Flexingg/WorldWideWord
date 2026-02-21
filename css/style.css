@@ -215,7 +215,7 @@ header.scrolled {
 .w.hl-green { background-color: var(--hl-green); }
 .w.hl-blue { background-color: var(--hl-blue); }
 .w.hl-red { background-color: var(--hl-red); }
-.lexicon-word { border-bottom: 2px dotted var(--text-subtle); }
+.lexicon-word {  }
 
 /* --- FLOATING SELECTION MENU --- */
 #selectionIsland { 
