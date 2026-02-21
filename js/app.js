@@ -1032,31 +1032,40 @@ const ReaderAudio = {
     initForChapter: (name) => {
         const parts = name.split(" ");
         const book = parts.slice(0, parts.length-1).join(" ");
-        ReaderAudio.folder = `bibles/BSB/BER-${book}/Audio/${name}/`;
+        const chapter = parts[parts.length-1];
+        // Use simple audio/{Book}_{Chapter}.mp3 format
+        const audioFile = `audio/${book.replace(/ /g, '_')}_${chapter}.mp3`;
         
         ReaderAudio.stop();
         document.getElementById('btnAudio').classList.remove('hidden');
         document.getElementById('btnStop').classList.add('hidden');
         
-        const check = new Audio(ReaderAudio.folder + "part_0.mp3");
+        const check = new Audio(audioFile);
         check.onloadeddata = () => { 
             document.getElementById('btnAudio').querySelector('span').innerText = "headphones";
-            ReaderAudio.playlist = [ReaderAudio.folder + "part_0.mp3"];
+            ReaderAudio.playlist = [audioFile];
         };
-        check.onerror = () => { document.getElementById('btnAudio').querySelector('span').innerText = "volume_off"; };
+        check.onerror = () => { 
+            document.getElementById('btnAudio').querySelector('span').innerText = "volume_off";
+            ReaderAudio.playlist = [];
+        };
         
         ReaderAudio.player.addEventListener('ended', ReaderAudio.next);
         ReaderAudio.player.addEventListener('timeupdate', ReaderAudio.updateScrubber);
     },
     
-    scanFiles: () => { ReaderAudio.playlist = []; ReaderAudio.findPart(0); },
+    scanFiles: () => { 
+        // For single-file format, just use the playlist as-is
+        if (ReaderAudio.playlist.length > 0) {
+            ReaderAudio.calcDurations();
+        }
+    },
     findPart: (idx) => {
-        const path = `${ReaderAudio.folder}part_${idx}.mp3`;
-        const t = new Audio(path);
-        t.onloadedmetadata = () => { ReaderAudio.playlist.push(path); ReaderAudio.findPart(idx + 1); };
-        t.onerror = () => { ReaderAudio.calcDurations(); };
+        // No longer needed for single-file format, but kept for compatibility
+        ReaderAudio.calcDurations();
     },
     calcDurations: () => {
+        if (ReaderAudio.playlist.length === 0) return;
         ReaderAudio.partDurations = new Array(ReaderAudio.playlist.length).fill(0);
         let loaded = 0;
         document.getElementById('audioPlayerPopup').classList.add('visible');
@@ -1309,7 +1318,7 @@ const ReadingPlans = {
                         '<div class="progress-text">Day ' + currentDay + ' of ' + plan.totalDays + ' • ' + pct + '% complete</div>' +
                     '</div>' +
                     '<div class="plan-actions">' +
-                        '<button class="btn-fill" onclick="ReadingPlans.showPlanGrid(\'' + plan.id + '\')">Open Plan</button>' +
+                        '<button class="btn-fill" onclick="ReadingPlans.showPlanGrid(\'' + plan.id + '\');">Open Plan</button>' +
                         '<button class="btn-text" onclick="event.stopPropagation(); ReadingPlans.unsubscribe(\'' + plan.id + '\'); ReadingPlans.showDashboard();">Unsubscribe</button>' +
                     '</div>'
                 : 
@@ -1364,7 +1373,9 @@ const ReadingPlans = {
                 '<div class="day-grid-header" onclick="ReadingPlans.toggleDayExpand(\'' + planId + '\', ' + reading.day + ')">' +
                     '<span class="day-grid-num">' + reading.day + '</span>' +
                 '</div>' +
-                '<div class="day-grid-refs">' + refsHtml + '</div>';
+                '<div class="day-grid-refs">' +
+                    refsHtml +
+                '</div>';
             
             gridContainer.appendChild(dayCard);
         }

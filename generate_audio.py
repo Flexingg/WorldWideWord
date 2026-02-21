@@ -89,11 +89,11 @@ class Config:
 class TextProcessor:
     """Process markdown text for TTS synthesis."""
     
-    # Pattern to match lexicon references like [[G976]], [[G1078]], etc.
-    LEXICON_PATTERN = re.compile(r'\[\[G\d+\]\]')
+    # Pattern to match lexicon references like [[G976]], [[G1078]], [[H1234]], etc.
+    LEXICON_PATTERN = re.compile(r'\[\[[GH]\d+\]\]')
     
     # Pattern to match incomplete lexicon references
-    LEXICON_INCOMPLETE_PATTERN = re.compile(r'\[\[G\d*|\]\]')
+    LEXICON_INCOMPLETE_PATTERN = re.compile(r'\[\[[GH]?\d*|\]\]')
     
     # Pattern to match verse markers (###### N)
     VERSE_MARKER_PATTERN = re.compile(r'^######\s+(\d+)\s*$', re.MULTILINE)
@@ -103,6 +103,9 @@ class TextProcessor:
     
     # Pattern to match navigation arrows and separators
     NAV_PATTERN = re.compile(r'[\←\→\•]|---')
+    
+    # Maximum characters per SSML chunk (Azure TTS has limits)
+    MAX_CHUNK_CHARS = 3000
     
     @classmethod
     def extract_text_from_markdown(cls, content: str) -> Tuple[str, List[Tuple[int, str]]]:
@@ -193,10 +196,63 @@ class TextProcessor:
         return text
     
     @classmethod
+    def split_verses_into_chunks(cls, chapter_title: str, verses: List[Tuple[int, str]]) -> List[str]:
+        """
+        Split verses into text chunks that fit within Azure TTS limits.
+        
+        Returns list of text chunks.
+        """
+        chunks = []
+        current_chunk = f"{chapter_title}."
+        current_length = len(current_chunk)
+        
+        for verse_num, verse_text in verses:
+            verse_with_space = f" {verse_text}"
+            verse_length = len(verse_with_space)
+            
+            # If adding this verse would exceed the limit, start a new chunk
+            if current_length + verse_length > cls.MAX_CHUNK_CHARS and current_chunk:
+                chunks.append(current_chunk.strip())
+                current_chunk = verse_text
+                current_length = len(verse_text)
+            else:
+                current_chunk += verse_with_space
+                current_length += verse_length
+        
+        # Don't forget the last chunk
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+        
+        return chunks
+    
+    @classmethod
+    def generate_ssml_for_chunk(cls, text: str, voice_name: str, rate: float = 0.9) -> str:
+        """
+        Generate SSML for a single text chunk.
+        """
+        # Escape XML special characters
+        text = text.replace('&', '&amp;')
+        text = text.replace('<', '&lt;')
+        text = text.replace('>', '&gt;')
+        text = text.replace('"', '&quot;')
+        text = text.replace("'", '&apos;')
+        
+        # Generate SSML
+        ssml = f'''<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+    <voice name="{voice_name}">
+        <prosody rate="{rate}">
+            {text}
+        </prosody>
+    </voice>
+</speak>'''
+        
+        return ssml
+    
+    @classmethod
     def generate_ssml(cls, chapter_title: str, verses: List[Tuple[int, str]], 
                       voice_name: str, rate: float = 0.9) -> str:
         """
-        Generate SSML for the chapter.
+        Generate SSML for the chapter (single chunk for backward compatibility).
         """
         # Build the text content
         text_parts = [f"{chapter_title}."]
@@ -206,23 +262,7 @@ class TextProcessor:
         
         full_text = ' '.join(text_parts)
         
-        # Escape XML special characters
-        full_text = full_text.replace('&', '&amp;')
-        full_text = full_text.replace('<', '&lt;')
-        full_text = full_text.replace('>', '&gt;')
-        full_text = full_text.replace('"', '&quot;')
-        full_text = full_text.replace("'", '&apos;')
-        
-        # Generate SSML
-        ssml = f'''<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
-    <voice name="{voice_name}">
-        <prosody rate="{rate}">
-            {full_text}
-        </prosody>
-    </voice>
-</speak>'''
-        
-        return ssml
+        return cls.generate_ssml_for_chunk(full_text, voice_name, rate)
 
 
 # ============================================================================
@@ -435,6 +475,31 @@ class AzureTTSClient:
         else:
             print(f"Unexpected result: {result.reason}")
             return None
+    
+    def synthesize_chunks(self, chunks: List[str], voice_name: str, rate: float = 0.9) -> Optional[bytes]:
+        """
+        Synthesize multiple text chunks and concatenate the audio.
+        
+        Returns concatenated audio data as bytes, or None on failure.
+        """
+        audio_parts = []
+        
+        for i, chunk_text in enumerate(chunks):
+            ssml = TextProcessor.generate_ssml_for_chunk(chunk_text, voice_name, rate)
+            audio_data = self.synthesize(ssml, voice_name)
+            
+            if audio_data is None:
+                print(f"Failed to synthesize chunk {i+1}/{len(chunks)}")
+                return None
+            
+            audio_parts.append(audio_data)
+            
+            # Small delay between chunks to avoid rate limiting
+            if i < len(chunks) - 1:
+                time.sleep(0.5)
+        
+        # Concatenate all audio parts
+        return b''.join(audio_parts)
 
 
 # ============================================================================
@@ -469,11 +534,6 @@ class AudioGenerator:
             print(f"No verses found in {chapter_info['path']}")
             return False
         
-        # Generate SSML
-        ssml = TextProcessor.generate_ssml(
-            chapter_title, verses, voice_name, self.config.speech_rate
-        )
-        
         if dry_run:
             print(f"  Would generate: {chapter_info['output_path'].name}")
             print(f"  Title: {chapter_title}, Verses: {len(verses)}")
@@ -482,8 +542,13 @@ class AudioGenerator:
         # Ensure output directory exists
         self.config.audio_dir.mkdir(parents=True, exist_ok=True)
         
-        # Synthesize
-        audio_data = self.tts_client.synthesize(ssml, voice_name)
+        # Split into chunks and synthesize
+        chunks = TextProcessor.split_verses_into_chunks(chapter_title, verses)
+        
+        if len(chunks) > 1:
+            print(f"  Splitting into {len(chunks)} chunks for {chapter_info['book']} {chapter_info['chapter']}...")
+        
+        audio_data = self.tts_client.synthesize_chunks(chunks, voice_name, self.config.speech_rate)
         
         if audio_data is None:
             return False
