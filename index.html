@@ -450,9 +450,58 @@
             </div>
         </div>
         
+        <!-- Backup & Restore Section -->
+        <div class="settings-section">
+            <div class="settings-section-title">
+                <span class="material-icons-round">backup</span>
+                Backup & Restore
+            </div>
+            
+            <p class="settings-desc">Export all your data including highlights, notes, reading plans, and statistics. Import a backup to restore on this or another device.</p>
+            
+            <div class="backup-actions">
+                <button class="btn-fill backup-btn" onclick="BackupRestore.exportAllData()">
+                    <span class="material-icons-round">download</span>
+                    Export Backup
+                </button>
+                <button class="btn-outline backup-btn" onclick="BackupRestore.triggerFileInput()">
+                    <span class="material-icons-round">upload</span>
+                    Import Backup
+                </button>
+                <input type="file" id="backupFileInput" accept=".json" style="display:none" onchange="BackupRestore.handleFileSelect(event)">
+            </div>
+        </div>
+        
         <button class="settings-reset" onclick="Settings.reset()">
             Reset to Defaults
         </button>
+    </div>
+</div>
+
+<!-- RESTORE CONFIRMATION MODAL -->
+<div id="restoreModal" class="modal" onclick="if(event.target.id==='restoreModal') BackupRestore.cancelRestore()">
+    <div class="modal-card restore-modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <span class="material-icons-round" style="color: var(--primary-color)">restore</span>
+            <span>Restore Backup</span>
+        </div>
+        
+        <div id="restorePreview" class="restore-preview">
+            <!-- Preview content will be inserted here -->
+        </div>
+        
+        <div class="restore-warning">
+            <span class="material-icons-round">warning</span>
+            <span>This will replace all current data. Make sure to export a backup first if you want to keep your current data.</span>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-text" onclick="BackupRestore.cancelRestore()">Cancel</button>
+            <button class="btn-fill" onclick="BackupRestore.confirmRestore()">
+                <span class="material-icons-round">restore</span>
+                Restore
+            </button>
+        </div>
     </div>
 </div>
 
@@ -463,6 +512,7 @@
 <script src="js/stats-calculator.js"></script>
 <script src="js/stats-ui.js"></script>
 <script src="js/offline-cache.js"></script>
+<script src="js/backup-restore.js"></script>
 <script src="js/app.js"></script>
 <script>
     if ('serviceWorker' in navigator) {

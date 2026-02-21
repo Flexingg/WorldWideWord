@@ -184,7 +184,7 @@ We are actively developing new features. Here is the priority list:
   - Navigate to previous/next chapter
   - Swipe right for previous chapter, swipe left for next chapter
 
-- **Installation Prompts:**
+- **Installation Prompts:** ✅ IMPLEMENTED
   - Custom UI element to encourage PWA installation
 
 - **Scroll Progress Bar:** ✅ IMPLEMENTED
