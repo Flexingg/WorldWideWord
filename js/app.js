@@ -1043,11 +1043,13 @@ const ReaderAudio = {
         
         console.log('[DEBUG] initForChapter:', { name, book, chapter, audioFile });
         
-        // Store the current audio file to prevent race conditions
+        // Stop any previous audio first (this clears currentAudioFile)
+        ReaderAudio.stop();
+        
+        // NOW set the current audio file for this chapter (after stop clears it)
         ReaderAudio.currentAudioFile = audioFile;
         const thisAudioFile = audioFile; // Capture for closure
         
-        ReaderAudio.stop();
         document.getElementById('btnAudio').classList.remove('hidden');
         document.getElementById('btnStop').classList.add('hidden');
         
