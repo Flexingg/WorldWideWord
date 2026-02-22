@@ -1026,7 +1026,12 @@ const Reader = {
 
 // --- AUDIO ---
 const ReaderAudio = {
-    folder: "", playlist: [], player: new Audio(),
+    folder: "", playlist: [], 
+    player: (() => {
+        const audio = new Audio();
+        audio.crossOrigin = "anonymous"; // Enable CORS for audio playback
+        return audio;
+    })(),
     partDurations: [], totalDuration: 0, currentTrack: 0,
     currentAudioFile: null, // Track the current audio file being checked
     
@@ -1054,6 +1059,7 @@ const ReaderAudio = {
         document.getElementById('btnStop').classList.add('hidden');
         
         const check = new Audio();
+        check.crossOrigin = "anonymous"; // Enable CORS for audio playback
         
         check.onloadeddata = () => { 
             // Only update if this is still the current chapter
@@ -1100,7 +1106,8 @@ const ReaderAudio = {
         let loaded = 0;
         document.getElementById('audioPlayerPopup').classList.add('visible');
         ReaderAudio.playlist.forEach((src, i) => {
-            const t = new Audio(src);
+            const t = new Audio();
+            t.crossOrigin = "anonymous"; // Enable CORS for audio playback
             t.onloadedmetadata = () => {
                 ReaderAudio.partDurations[i] = t.duration; loaded++;
                 if(loaded === ReaderAudio.playlist.length) {
@@ -1109,6 +1116,7 @@ const ReaderAudio = {
                     ReaderAudio.playTrack(0);
                 }
             };
+            t.src = src;
         });
     },
     toggleUI: () => { if(ReaderAudio.playlist.length > 0) ReaderAudio.scanFiles(); },
