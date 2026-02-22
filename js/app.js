@@ -1028,6 +1028,7 @@ const Reader = {
 const ReaderAudio = {
     folder: "", playlist: [], player: new Audio(),
     partDurations: [], totalDuration: 0, currentTrack: 0,
+    currentAudioFile: null, // Track the current audio file being checked
     
     initForChapter: (name) => {
         const parts = name.split(" ");
@@ -1040,19 +1041,42 @@ const ReaderAudio = {
             ? AppConfig.audio.getChapterUrl(book, chapter)
             : `audio/${book.replace(/ /g, '_')}_${chapter}.mp3`;
         
+        console.log('[DEBUG] initForChapter:', { name, book, chapter, audioFile });
+        
+        // Store the current audio file to prevent race conditions
+        ReaderAudio.currentAudioFile = audioFile;
+        const thisAudioFile = audioFile; // Capture for closure
+        
         ReaderAudio.stop();
         document.getElementById('btnAudio').classList.remove('hidden');
         document.getElementById('btnStop').classList.add('hidden');
         
-        const check = new Audio(audioFile);
+        const check = new Audio();
+        
         check.onloadeddata = () => { 
+            // Only update if this is still the current chapter
+            if (ReaderAudio.currentAudioFile !== thisAudioFile) {
+                console.log('[DEBUG] Audio loaded but chapter changed, ignoring');
+                return;
+            }
+            console.log('[DEBUG] Audio file found:', thisAudioFile);
             document.getElementById('btnAudio').querySelector('span').innerText = "headphones";
-            ReaderAudio.playlist = [audioFile];
+            ReaderAudio.playlist = [thisAudioFile];
         };
+        
         check.onerror = () => { 
+            // Only update if this is still the current chapter
+            if (ReaderAudio.currentAudioFile !== thisAudioFile) {
+                console.log('[DEBUG] Audio error but chapter changed, ignoring');
+                return;
+            }
+            console.log('[DEBUG] Audio file not found:', thisAudioFile);
             document.getElementById('btnAudio').querySelector('span').innerText = "volume_off";
             ReaderAudio.playlist = [];
         };
+        
+        check.src = thisAudioFile;
+        check.load();
         
         ReaderAudio.player.addEventListener('ended', ReaderAudio.next);
         ReaderAudio.player.addEventListener('timeupdate', ReaderAudio.updateScrubber);
@@ -1102,7 +1126,13 @@ const ReaderAudio = {
         ReaderAudio.player.play().then(() => ReaderAudio.updateUI(true)).catch(e => console.log("Play error", e));
     },
     stop: () => {
-        ReaderAudio.player.pause(); ReaderAudio.player.currentTime = 0; ReaderAudio.currentTrack = 0;
+        ReaderAudio.player.pause(); 
+        ReaderAudio.player.src = "";  // Clear the source
+        ReaderAudio.player.load();    // Reset the player
+        ReaderAudio.player.currentTime = 0; 
+        ReaderAudio.currentTrack = 0;
+        ReaderAudio.playlist = [];    // Clear the playlist
+        ReaderAudio.currentAudioFile = null; // Clear the current audio file
         document.getElementById('audioPlayerPopup').classList.remove('visible');
         ReaderAudio.updateUI(false);
         document.getElementById('btnStop').classList.add('hidden');

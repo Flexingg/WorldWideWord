@@ -117,11 +117,13 @@ To deploy your own instance, organize your repository exactly as follows:
 ├── manifest.json         # PWA Configuration
 ├── sw.js                 # Service Worker (Offline Logic)
 ├── generate_index.py     # Search Indexer Script
+├── generate_audio.py     # Azure TTS Audio Generator
 │
 ├── css/
 │   └── style.css         # Styling & Theme Tokens
 │
 ├── js/
+│   ├── config.js         # Application Configuration (Audio URL, Features)
 │   ├── app.js            # Core Logic (UI, State, Router)
 │   ├── adapter.js        # Platform Abstraction Layer (IO)
 │   ├── stats-db.js       # IndexedDB Wrapper for Statistics
@@ -132,6 +134,9 @@ To deploy your own instance, organize your repository exactly as follows:
 ├── data/
 │   └── search_index.json # Generated Search Map
 │
+├── audio/                # Audio Files (hosted externally on Cloudflare R2)
+│   └── .gitkeep          # Directory placeholder
+│
 ├── plans/                # Reading Plans Directory
 │   ├── index.json        # Plan Catalog
 │   ├── bible-in-a-year.json
@@ -140,11 +145,7 @@ To deploy your own instance, organize your repository exactly as follows:
 └── bibles/               # Content Repository
     └── BSB/
         └── BER-Genesis/
-            ├── Genesis 1.md
-            └── Audio/
-                └── Genesis 1/
-                    ├── part_0.mp3
-                    └── part_1.mp3
+            └── Genesis 1.md
 ```
 
 ## 🗺️ Development Roadmap
@@ -336,8 +337,16 @@ WordWideWeb includes a script to generate MP3 audio files for Bible chapters usi
 Create a `.env` file in the project root (or copy from `.env.example`):
 
 ```env
+# Azure TTS Configuration
 AZURE_TTS_KEY=your-subscription-key-here
 AZURE_TTS_REGION=eastus
+
+# Cloudflare R2 Configuration (for audio hosting)
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key
+R2_SECRET_ACCESS_KEY=your-secret-key
+R2_BUCKET_NAME=wordwideweb-audio
+R2_PUBLIC_URL=https://your-r2-url.r2.dev
 ```
 
 #### Usage
@@ -369,7 +378,50 @@ Generated MP3 files are saved to the `audio/` directory with naming convention:
 - `1_Samuel_3.mp3`
 - `Song_of_Solomon_1.mp3`
 
-> **Note:** The app currently looks for audio in `bibles/BSB/BER-{Book}/Audio/{Book} {Chapter}/part_0.mp3`. Future updates will integrate the new `audio/` directory structure.
+### 5. Hosting Audio Files on Cloudflare R2
+
+Due to GitHub Pages' repository size limitations, audio files (5GB+) are hosted externally on **Cloudflare R2**. This provides:
+
+- **10GB free tier** - Covers the entire Bible audio
+- **Zero egress fees** - No cost for streaming audio
+- **Global CDN** - Fast delivery worldwide
+- **Custom domain support** - Professional URLs like `audio.wordwideweb.com`
+
+#### Quick Setup
+
+1. **Create R2 Bucket:**
+   - Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → R2
+   - Create bucket named `wordwideweb-audio`
+   - Enable public access (custom domain or R2.dev URL)
+
+2. **Configure CORS:**
+   ```json
+   [
+     {
+       "AllowedOrigins": ["*"],
+       "AllowedMethods": ["GET", "HEAD"],
+       "AllowedHeaders": ["*"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+3. **Upload Audio Files:**
+   ```bash
+   # Using rclone
+   rclone sync ./audio r2:wordwideweb-audio --progress
+   ```
+
+4. **Configure Application:**
+   Edit `js/config.js`:
+   ```javascript
+   audio: {
+       productionUrl: 'https://your-r2-url-here',
+       // ...
+   }
+   ```
+
+For detailed setup instructions, see [`docs/cloudflare-r2-setup.md`](docs/cloudflare-r2-setup.md).
 
 #### Text Processing
 
@@ -389,13 +441,15 @@ The entire Bible contains approximately 3.5 million characters, so generating al
 - Standard: ~$14
 - Neural: ~$56
 
-### 5. Hosting on GitHub Pages
+### 6. Hosting on GitHub Pages
 
 1. Push this code to a GitHub repository.
 2. Go to **Settings > Pages**.
 3. Select **Source: Deploy from a branch**.
 4. Select **Branch: main** (or master) and **folder: / (root)**
 5. Save. Your PWA is now live globally.
+
+> **Note:** Audio files are excluded from the repository (via `.gitignore`) and hosted on Cloudflare R2 for better performance and no repository size limits.
 
 ## 📊 Statistics System Architecture
 
