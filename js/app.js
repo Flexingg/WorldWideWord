@@ -1033,8 +1033,12 @@ const ReaderAudio = {
         const parts = name.split(" ");
         const book = parts.slice(0, parts.length-1).join(" ");
         const chapter = parts[parts.length-1];
-        // Use simple audio/{Book}_{Chapter}.mp3 format
-        const audioFile = `audio/${book.replace(/ /g, '_')}_${chapter}.mp3`;
+        
+        // Use AppConfig for audio URL (supports local and R2 hosting)
+        // Configure R2 URL in js/config.js under AppConfig.audio.productionUrl
+        const audioFile = window.AppConfig 
+            ? AppConfig.audio.getChapterUrl(book, chapter)
+            : `audio/${book.replace(/ /g, '_')}_${chapter}.mp3`;
         
         ReaderAudio.stop();
         document.getElementById('btnAudio').classList.remove('hidden');

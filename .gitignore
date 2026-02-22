@@ -21,5 +21,9 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Generated audio files (optional - uncomment if you don't want to track audio)
-# audio/*.mp3
+# Generated audio files - hosted on Cloudflare R2
+# Audio files are stored externally to keep repo size manageable
+audio/*.mp3
+
+# Keep the .gitkeep file to preserve the audio directory structure
+!audio/.gitkeep
