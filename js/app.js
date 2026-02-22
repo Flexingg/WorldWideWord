@@ -1,7 +1,6 @@
 /**
  * WordWideWeb - Pure Web Logic
  */
-console.log('[DEBUG] app.js - Script started loading');
 
 const BOOKS = [{"n":"Genesis","c":50},{"n":"Exodus","c":40},{"n":"Leviticus","c":27},{"n":"Numbers","c":36},{"n":"Deuteronomy","c":34},{"n":"Joshua","c":24},{"n":"Judges","c":21},{"n":"Ruth","c":4},{"n":"1 Samuel","c":31},{"n":"2 Samuel","c":24},{"n":"1 Kings","c":22},{"n":"2 Kings","c":25},{"n":"1 Chronicles","c":29},{"n":"2 Chronicles","c":36},{"n":"Ezra","c":10},{"n":"Nehemiah","c":13},{"n":"Esther","c":10},{"n":"Job","c":42},{"n":"Psalms","c":150},{"n":"Proverbs","c":31},{"n":"Ecclesiastes","c":12},{"n":"Song of Solomon","c":8},{"n":"Isaiah","c":66},{"n":"Jeremiah","c":52},{"n":"Lamentations","c":5},{"n":"Ezekiel","c":48},{"n":"Daniel","c":12},{"n":"Hosea","c":14},{"n":"Joel","c":3},{"n":"Amos","c":9},{"n":"Obadiah","c":1},{"n":"Jonah","c":4},{"n":"Micah","c":7},{"n":"Nahum","c":3},{"n":"Habakkuk","c":3},{"n":"Zephaniah","c":3},{"n":"Haggai","c":2},{"n":"Zechariah","c":14},{"n":"Malachi","c":4},{"n":"Matthew","c":28},{"n":"Mark","c":16},{"n":"Luke","c":24},{"n":"John","c":21},{"n":"Acts","c":28},{"n":"Romans","c":16},{"n":"1 Corinthians","c":16},{"n":"2 Corinthians","c":13},{"n":"Galatians","c":6},{"n":"Ephesians","c":6},{"n":"Philippians","c":4},{"n":"Colossians","c":4},{"n":"1 Thessalonians","c":5},{"n":"2 Thessalonians","c":3},{"n":"1 Timothy","c":6},{"n":"2 Timothy","c":4},{"n":"Titus","c":3},{"n":"Philemon","c":1},{"n":"Hebrews","c":13},{"n":"James","c":5},{"n":"1 Peter","c":5},{"n":"2 Peter","c":3},{"n":"1 John","c":5},{"n":"2 John","c":1},{"n":"3 John","c":1},{"n":"Jude","c":1},{"n":"Revelation","c":22 }];
 
@@ -1046,8 +1045,6 @@ const ReaderAudio = {
             ? AppConfig.audio.getChapterUrl(book, chapter)
             : `audio/${book.replace(/ /g, '_')}_${chapter}.mp3`;
         
-        console.log('[DEBUG] initForChapter:', { name, book, chapter, audioFile });
-        
         // Stop any previous audio first (this clears currentAudioFile)
         ReaderAudio.stop();
         
@@ -1063,22 +1060,14 @@ const ReaderAudio = {
         
         check.onloadeddata = () => { 
             // Only update if this is still the current chapter
-            if (ReaderAudio.currentAudioFile !== thisAudioFile) {
-                console.log('[DEBUG] Audio loaded but chapter changed, ignoring');
-                return;
-            }
-            console.log('[DEBUG] Audio file found:', thisAudioFile);
+            if (ReaderAudio.currentAudioFile !== thisAudioFile) return;
             document.getElementById('btnAudio').querySelector('span').innerText = "headphones";
             ReaderAudio.playlist = [thisAudioFile];
         };
         
         check.onerror = () => { 
             // Only update if this is still the current chapter
-            if (ReaderAudio.currentAudioFile !== thisAudioFile) {
-                console.log('[DEBUG] Audio error but chapter changed, ignoring');
-                return;
-            }
-            console.log('[DEBUG] Audio file not found:', thisAudioFile);
+            if (ReaderAudio.currentAudioFile !== thisAudioFile) return;
             document.getElementById('btnAudio').querySelector('span').innerText = "volume_off";
             ReaderAudio.playlist = [];
         };
@@ -1124,35 +1113,19 @@ const ReaderAudio = {
     togglePlay: () => { if(ReaderAudio.player.paused) ReaderAudio.playTrack(ReaderAudio.currentTrack); else { ReaderAudio.player.pause(); ReaderAudio.updateUI(false); } },
     
     playTrack: (idx) => {
-        console.log('[DEBUG] playTrack called with idx:', idx, 'playlist:', ReaderAudio.playlist);
         if(idx >= ReaderAudio.playlist.length) { ReaderAudio.stop(); return; }
         
         const audioUrl = ReaderAudio.playlist[idx];
-        console.log('[DEBUG] Audio URL to play:', audioUrl);
-        console.log('[DEBUG] Player crossOrigin:', ReaderAudio.player.crossOrigin);
         
         if(ReaderAudio.currentTrack !== idx || ReaderAudio.player.src === "" || ReaderAudio.player.src !== audioUrl) {
-            console.log('[DEBUG] Setting new source...');
             ReaderAudio.player.src = audioUrl;
-            console.log('[DEBUG] Player src after setting:', ReaderAudio.player.src);
             ReaderAudio.player.load();
         }
         ReaderAudio.currentTrack = idx;
         const savedSpeed = parseFloat(AppAPI.getGlobal("BibleAudioSpeed") || 1.0);
         ReaderAudio.player.playbackRate = savedSpeed;
         
-        console.log('[DEBUG] Attempting to play...');
-        console.log('[DEBUG] Player readyState:', ReaderAudio.player.readyState);
-        console.log('[DEBUG] Player networkState:', ReaderAudio.player.networkState);
-        
-        ReaderAudio.player.play().then(() => {
-            console.log('[DEBUG] Play succeeded!');
-            ReaderAudio.updateUI(true);
-        }).catch(e => {
-            console.log("Play error", e);
-            console.log('[DEBUG] Player src at error:', ReaderAudio.player.src);
-            console.log('[DEBUG] Player error code:', ReaderAudio.player.error ? ReaderAudio.player.error.code : 'no error object');
-        });
+        ReaderAudio.player.play().then(() => ReaderAudio.updateUI(true)).catch(e => console.log("Play error", e));
     },
     stop: () => {
         ReaderAudio.player.pause(); 
@@ -1576,4 +1549,3 @@ const ReaderScroll = {
 };
 
 window.onload = App.init;
-console.log('[DEBUG] app.js - Script finished loading');

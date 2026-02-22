@@ -95,5 +95,3 @@ const AppConfig = {
 
 // Make configuration available globally
 window.AppConfig = AppConfig;
-
-console.log('[DEBUG] config.js loaded - Audio URL:', AppConfig.audio.getBaseUrl());
