@@ -1124,16 +1124,35 @@ const ReaderAudio = {
     togglePlay: () => { if(ReaderAudio.player.paused) ReaderAudio.playTrack(ReaderAudio.currentTrack); else { ReaderAudio.player.pause(); ReaderAudio.updateUI(false); } },
     
     playTrack: (idx) => {
+        console.log('[DEBUG] playTrack called with idx:', idx, 'playlist:', ReaderAudio.playlist);
         if(idx >= ReaderAudio.playlist.length) { ReaderAudio.stop(); return; }
-        if(ReaderAudio.currentTrack !== idx || ReaderAudio.player.src === "") {
-            ReaderAudio.player.src = ReaderAudio.playlist[idx];
+        
+        const audioUrl = ReaderAudio.playlist[idx];
+        console.log('[DEBUG] Audio URL to play:', audioUrl);
+        console.log('[DEBUG] Player crossOrigin:', ReaderAudio.player.crossOrigin);
+        
+        if(ReaderAudio.currentTrack !== idx || ReaderAudio.player.src === "" || ReaderAudio.player.src !== audioUrl) {
+            console.log('[DEBUG] Setting new source...');
+            ReaderAudio.player.src = audioUrl;
+            console.log('[DEBUG] Player src after setting:', ReaderAudio.player.src);
             ReaderAudio.player.load();
         }
         ReaderAudio.currentTrack = idx;
         const savedSpeed = parseFloat(AppAPI.getGlobal("BibleAudioSpeed") || 1.0);
         ReaderAudio.player.playbackRate = savedSpeed;
         
-        ReaderAudio.player.play().then(() => ReaderAudio.updateUI(true)).catch(e => console.log("Play error", e));
+        console.log('[DEBUG] Attempting to play...');
+        console.log('[DEBUG] Player readyState:', ReaderAudio.player.readyState);
+        console.log('[DEBUG] Player networkState:', ReaderAudio.player.networkState);
+        
+        ReaderAudio.player.play().then(() => {
+            console.log('[DEBUG] Play succeeded!');
+            ReaderAudio.updateUI(true);
+        }).catch(e => {
+            console.log("Play error", e);
+            console.log('[DEBUG] Player src at error:', ReaderAudio.player.src);
+            console.log('[DEBUG] Player error code:', ReaderAudio.player.error ? ReaderAudio.player.error.code : 'no error object');
+        });
     },
     stop: () => {
         ReaderAudio.player.pause(); 
